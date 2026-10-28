@@ -1,0 +1,17 @@
+# Alternativa a iniciar.cmd: docker compose up -d --build
+# Solo escucha en este PC (127.0.0.1). El token del bot se lee de .env si existe.
+services:
+  hq:
+    build: .
+    image: liiot-hq
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - hq-data:/data
+    restart: unless-stopped
+
+volumes:
+  hq-data:

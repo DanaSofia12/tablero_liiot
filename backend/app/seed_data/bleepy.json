@@ -1,0 +1,160 @@
+{
+  "source": "Vault Liiot: 10_Proyectos/Bleepy/01_Gestion (14 tareas), Cronograma piloto y Rubrica de verificacion piloto Bleepy.docx",
+  "members": [
+    {
+      "id": "dana", "name": "Dana", "fullName": "Dana Sofía Sánchez Ortiz", "role": "CEO",
+      "area": "Decisiones, organización y seguimiento", "color": "#FF6A33", "capacity": 10,
+      "avatar": {"hair": "wolf", "hairColor": "#16121C", "skin": "#F0C9AD", "eyes": "#3B2A20", "top": "#F4F1F6",
+                 "outer": null, "outerStyle": "none", "glasses": false, "necklace": true, "lips": "#D2405A", "lashes": true}
+    },
+    {
+      "id": "jd", "name": "Juan David", "fullName": "Juan David Ocaño", "role": "CCO",
+      "area": "Ventas, modelo de negocio e ideas", "color": "#E2B31C", "capacity": 10,
+      "avatar": {"hair": "wavy", "hairColor": "#251A15", "skin": "#E8BD9C", "eyes": "#2E2018", "top": "#F3F2EE",
+                 "outer": "#1D1A22", "outerStyle": "overshirt", "glasses": false, "necklace": true, "lips": null}
+    },
+    {
+      "id": "jp", "name": "Jean Pierre", "fullName": "Jean Pierre Ortiz Murcia", "role": "CTO",
+      "area": "Arquitectura y desarrollo tecnológico", "color": "#8B45CC", "capacity": 10,
+      "avatar": {"hair": "bowl", "hairColor": "#2B1E18", "skin": "#EDC6A6", "eyes": "#2E2018", "top": "#5E5B3D",
+                 "outer": "#7F97B5", "outerStyle": "denim", "glasses": true, "necklace": false, "lips": null}
+    }
+  ],
+  "project": {
+    "id": "bleepy", "code": "PRJ-LCOM", "name": "Bleepy",
+    "summary": "Plataforma B2B2C que conecta empresas con equipos creativos para crear contenido orgánico. Piloto de validación en 4 semanas.",
+    "leadId": "dana", "pilotDate": "2026-11-15", "backupDate": "2026-12-01", "phase": "Piloto de validación",
+    "keyPrefix": "BLP", "theme": "bleepy"
+  },
+  "stages": [
+    {"ref": "s1", "name": "Semana 1 · Cerrar la definición", "start": "2026-10-15", "end": "2026-10-19",
+     "exitCriteria": "Nada ambiguo sobre qué incluye el piloto ni cuánto cuesta."},
+    {"ref": "s2", "name": "Semana 2 · Marca y testers", "start": "2026-10-20", "end": "2026-10-26",
+     "exitCriteria": "Marca usable y guion de validación probado con personas ajenas al equipo."},
+    {"ref": "s3", "name": "Semana 3 · Validación", "start": "2026-10-27", "end": "2026-11-02",
+     "exitCriteria": "Evidencia de que el flujo funciona de punta a punta con usuarios reales."},
+    {"ref": "s4", "name": "Semana 4 · Ensayo y freeze", "start": "2026-11-03", "end": "2026-11-09",
+     "exitCriteria": "Ensayo general hecho, plan B probado y solo fixes bloqueantes."},
+    {"ref": "s5", "name": "Piloto", "start": "2026-11-10", "end": "2026-11-15",
+     "exitCriteria": "Piloto lanzado el 15 de noviembre (respaldo: 1 de diciembre)."}
+  ],
+  "tasks": [
+    {"title": "Presentar preguntas del flujo al equipo", "legacyId": "TSK-20261013-01", "owner": "jp", "type": "desarrollo", "status": "por_hacer",
+     "summary": "Presentar al equipo las dudas sobre el flujo de trabajo de la plataforma.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "S", "rubric": [], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Definir los tipos de pieza permitidos", "legacyId": "TSK-20261013-02", "owner": "dana", "type": "negocio", "status": "por_hacer",
+     "summary": "Gráficas, video y edición. En la reunión del 10 oct se acordó que el piloto incluye esos tres tipos.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P1", "effort": "S", "rubric": ["N1"], "collaborators": ["jp", "jd"], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Tabla de precios base por pieza", "legacyId": "TSK-20261013-03", "owner": "jd", "type": "negocio", "status": "por_hacer",
+     "summary": "Planes prepagados por cantidad (ej. 300 USD / 30 piezas, 450 / 40, 700 / 60), con el ajuste de 300 a 350 por la entrada de voz.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P1", "effort": "M", "rubric": ["N2"], "collaborators": ["dana", "jp"], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Consultar tarifas de creadores a Saray", "legacyId": "TSK-20261013-04", "owner": "jp", "type": "investigacion", "status": "por_hacer",
+     "summary": "Preguntar a Saray las tarifas de creadores y si conoce perfiles adicionales para el marketplace.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "S", "rubric": ["N3"], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Centralizar el diagrama de flujo", "legacyId": "TSK-20261013-05", "owner": "dana", "type": "gestion", "status": "por_hacer",
+     "summary": "Consolidar el diagrama del flujo del proceso en la documentación para unificar la información.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "M", "rubric": [], "collaborators": ["jd", "jp"], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Definir entregables de las 4 semanas del piloto", "legacyId": "TSK-20261013-06", "owner": "jp", "type": "gestion", "status": "por_hacer",
+     "summary": "Cronograma de entregables para validar la idea antes del 15 nov (respaldo 1 dic). Ver «Cronograma piloto» en el vault.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "S", "rubric": [], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Presentar el cronograma semanal de desarrollo", "legacyId": "TSK-20261013-07", "owner": "jp", "type": "gestion", "status": "por_hacer",
+     "summary": "Presentar el detalle de las tareas de desarrollo planificadas para la semana.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "S", "rubric": [], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Diagrama de procesos y casos de uso", "legacyId": "TSK-20261013-11", "owner": "jd", "type": "gestion", "status": "por_hacer",
+     "summary": "Diagrama de procesos con los flujos de trabajo y los posibles casos de uso del sistema.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "M", "rubric": [], "collaborators": ["dana"], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Crear la rúbrica de verificación", "legacyId": "TSK-20261013-12", "owner": "dana", "type": "calidad", "status": "por_hacer",
+     "summary": "Rúbrica para gestionar errores y procesar el feedback de usuarios. El borrador del vault (Rubrica de verificacion piloto Bleepy.docx) ya está cargado en Lanzamiento.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "M", "rubric": [], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Modelo de negocio y costos", "legacyId": "TSK-20261013-13", "owner": "jd", "type": "negocio", "status": "por_hacer",
+     "summary": "Modelo de negocio con costos proyectados, precios a usuarios y requerimientos para el piloto.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P1", "effort": "M", "rubric": ["N4"], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Estimar costos de infraestructura y voz", "legacyId": "TSK-20261013-14", "owner": "jp", "type": "desarrollo", "status": "en_progreso",
+     "summary": "Costos de infraestructura, arquitectura y servicios técnicos (AWS o servidores propios), incluida la entrada por voz.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "M", "rubric": ["T5"], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Revisar el flujo de la plataforma", "legacyId": "TSK-20261013-10", "owner": "jp", "type": "desarrollo", "status": "en_progreso",
+     "summary": "Analizar el flujo para identificar y comunicar dudas o ajustes durante el desarrollo.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P2", "effort": "M", "rubric": [], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Bocetos de logo con Saray (universo creativo)", "legacyId": "TSK-20261013-09", "owner": "jp", "type": "diseno", "status": "en_progreso",
+     "summary": "Saray envía bocetos del logo con el concepto de universo creativo: paleta multicolor viva y tipografías curvas. Jean Pierre hace el seguimiento en las dailies.", "stage": "s1", "start": "2026-10-13", "due": "2026-10-19",
+     "priority": "P1", "effort": "M", "rubric": ["M1"], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Decisión sobre la entrada por voz", "legacyId": "TSK-20261013-08", "owner": "jp", "type": "desarrollo", "status": "por_hacer",
+     "summary": "Evaluar viabilidad técnica y costos de la entrada por voz al brief. En la reunión se aprobó con ajuste de suscripción de 300 a 350.", "stage": "s2", "start": "2026-10-20", "due": "2026-10-26",
+     "priority": "P2", "effort": "M", "rubric": ["F5"], "collaborators": [], "origin": "Reunión Bleepy 2026-10-10"},
+    {"title": "Identidad v1 de Bleepy (entrega de Saray)", "legacyId": null, "owner": "dana", "type": "diseno", "status": "por_hacer",
+     "summary": "Logo, paleta, tipografía y piezas de ejemplo. Saray entrega; Dana la aprueba con el grupo.", "stage": "s2", "start": "2026-10-20", "due": "2026-10-26",
+     "priority": "P1", "effort": "L", "rubric": ["M1"], "collaborators": ["jp"], "origin": "Cronograma piloto"},
+    {"title": "Reclutar 12 testers (4 perfiles × 3)", "legacyId": null, "owner": "dana", "type": "gestion", "status": "por_hacer",
+     "summary": "Doce testers repartidos en cuatro perfiles para la validación.", "stage": "s2", "start": "2026-10-20", "due": "2026-10-26",
+     "priority": "P2", "effort": "M", "rubric": [], "collaborators": [], "origin": "Cronograma piloto"},
+    {"title": "Probar el guion con 2 personas ajenas al equipo", "legacyId": null, "owner": "dana", "type": "investigacion", "status": "por_hacer",
+     "summary": "Correr el piloto con dos personas externas y ajustar el guion de validación.", "stage": "s2", "start": "2026-10-20", "due": "2026-10-26",
+     "priority": "P1", "effort": "M", "rubric": ["U2", "M4"], "collaborators": ["jd"], "origin": "Cronograma piloto"},
+    {"title": "Recorrido completo: brief, match, entrega, feedback y cierre", "legacyId": null, "owner": "dana", "type": "gestion", "status": "por_hacer",
+     "summary": "Recorrer el flujo de punta a punta con usuarios reales.", "stage": "s3", "start": "2026-10-27", "due": "2026-11-02",
+     "priority": "P1", "effort": "L", "rubric": ["F1", "F2"], "collaborators": ["jp", "jd"], "origin": "Cronograma piloto"},
+    {"title": "Comprometer 3 empresas y 6 creadores", "legacyId": null, "owner": "jd", "type": "negocio", "status": "por_hacer",
+     "summary": "Máximo dos creadores por empresa, con confirmación por escrito.", "stage": "s3", "start": "2026-10-27", "due": "2026-11-02",
+     "priority": "P1", "effort": "L", "rubric": ["U1"], "collaborators": ["dana"], "origin": "Cronograma piloto"},
+    {"title": "Convertir hallazgos del piloto en ajustes priorizados", "legacyId": null, "owner": "jd", "type": "gestion", "status": "por_hacer",
+     "summary": "Lista priorizada de ajustes después de cada sesión con testers.", "stage": "s3", "start": "2026-10-27", "due": "2026-11-02",
+     "priority": "P2", "effort": "M", "rubric": ["C5"], "collaborators": ["dana"], "origin": "Cronograma piloto"},
+    {"title": "Ensayo general desde URL pública con cuentas nuevas", "legacyId": null, "owner": "jp", "type": "desarrollo", "status": "por_hacer",
+     "summary": "Recorrer todo desde una URL pública con cuentas nuevas, desde otra red y otro dispositivo.", "stage": "s4", "start": "2026-11-03", "due": "2026-11-09",
+     "priority": "P1", "effort": "L", "rubric": ["T1", "T3"], "collaborators": [], "origin": "Cronograma piloto"},
+    {"title": "Plan B probado: red, subida y servidor", "legacyId": null, "owner": "jp", "type": "desarrollo", "status": "por_hacer",
+     "summary": "Simulacro de fallo de red, de subida y de servidor, con resultado documentado.", "stage": "s4", "start": "2026-11-03", "due": "2026-11-09",
+     "priority": "P1", "effort": "M", "rubric": ["O1"], "collaborators": [], "origin": "Cronograma piloto"},
+    {"title": "Freeze: solo fixes bloqueantes", "legacyId": null, "owner": "jp", "type": "calidad", "status": "por_hacer",
+     "summary": "Congelar cambios; solo se corrigen errores P0 y P1 antes del piloto.", "stage": "s4", "start": "2026-11-03", "due": "2026-11-09",
+     "priority": "P1", "effort": "M", "rubric": ["T2"], "collaborators": ["dana", "jd"], "origin": "Cronograma piloto"}
+  ],
+  "rubric": [
+    {"name": "Flujo de punta a punta", "criteria": [
+      {"code": "F1", "title": "Una empresa recorre brief → selección de equipo → entrega → ajustes → cierre sin ayuda del equipo (flujo marca).", "verify": "Ensayo con cuenta nueva, sin tocar la base de datos a mano.", "blocking": true},
+      {"code": "F2", "title": "Un creador recorre solicitud → aceptación → subida de piezas → feedback (flujo creador).", "verify": "Ensayo con cuenta nueva de creador.", "blocking": true},
+      {"code": "F3", "title": "Registro e ingreso con email y con Google funcionan.", "verify": "Probar ambos con cuentas nuevas.", "blocking": false},
+      {"code": "F4", "title": "Máximo de dos creadores.", "verify": "Intentar asignar un tercero: el sistema lo impide.", "blocking": false},
+      {"code": "F5", "title": "Entrada por voz al brief funciona (o queda decidido que no entra).", "verify": "Dictar un brief completo; o decisión registrada.", "blocking": false}
+    ]},
+    {"name": "Contenido y negocio", "criteria": [
+      {"code": "N1", "title": "Tipos de pieza definidos: gráficas, video y edición.", "verify": "Lista publicada y visible en la plataforma.", "blocking": true},
+      {"code": "N2", "title": "Planes por cantidad de piezas con precio definido (ajuste de 300 a 350 por voz).", "verify": "Tabla de precios aprobada por el grupo.", "blocking": true},
+      {"code": "N3", "title": "Tarifas de creadores confirmadas (Saray) y coherentes con los precios.", "verify": "Tarifas vs. precio de plan, sin margen negativo.", "blocking": false},
+      {"code": "N4", "title": "Modelo de cobro del piloto claro (preventa, pago externo o gratis).", "verify": "Una frase aprobada y comunicada a los testers.", "blocking": true}
+    ]},
+    {"name": "Calidad, errores y feedback", "criteria": [
+      {"code": "C1", "title": "Cada entrega se puede aprobar o pedir ajustes, con número de rondas definido.", "verify": "Prueba en plataforma; regla escrita.", "blocking": true},
+      {"code": "C2", "title": "La marca puede reportar o vetar contenido no deseado.", "verify": "Probar el reporte y que llegue al equipo.", "blocking": false},
+      {"code": "C3", "title": "Hay un canal único para reportar errores y feedback.", "verify": "Formulario o canal activo y conocido por los testers.", "blocking": true},
+      {"code": "C4", "title": "Los errores se clasifican por severidad y tienen responsable y plazo.", "verify": "Bitácora.", "blocking": true},
+      {"code": "C5", "title": "El feedback de testers se convierte en ajustes priorizados.", "verify": "Lista priorizada tras cada sesión.", "blocking": false}
+    ]},
+    {"name": "Marca y experiencia", "criteria": [
+      {"code": "M1", "title": "Identidad v1 lista: logo, paleta multicolor, tipografía.", "verify": "Entrega de Saray aprobada por el grupo.", "blocking": true},
+      {"code": "M2", "title": "Mensajes claros: la IA planifica, no crea el contenido.", "verify": "Revisar textos de onboarding y plan.", "blocking": false},
+      {"code": "M3", "title": "Ajustes críticos de la auditoría UX/UI aplicados (onboarding corto, brief sin presupuesto).", "verify": "Contrastar contra la Auditoría de UX UI.", "blocking": false},
+      {"code": "M4", "title": "Un tester completa el flujo sin preguntar qué hacer.", "verify": "Prueba con 2 personas ajenas al equipo.", "blocking": true}
+    ]},
+    {"name": "Técnica y estabilidad", "criteria": [
+      {"code": "T1", "title": "Plataforma desplegada en URL pública con dominio.", "verify": "Abrir desde otra red y otro dispositivo.", "blocking": true},
+      {"code": "T2", "title": "Sin errores críticos abiertos en backend, frontend y base de datos.", "verify": "Bitácora sin P0/P1 abiertos.", "blocking": true},
+      {"code": "T3", "title": "Subida y descarga de archivos funciona con piezas reales (imagen y video).", "verify": "Subir archivos del tamaño esperado.", "blocking": true},
+      {"code": "T4", "title": "Accesos protegidos: cada usuario ve solo lo suyo; token admin rotado.", "verify": "Probar con dos cuentas; revisar RLS.", "blocking": true},
+      {"code": "T5", "title": "Costos de infraestructura y voz estimados y dentro de presupuesto.", "verify": "Presupuesto aprobado.", "blocking": false},
+      {"code": "T6", "title": "Respaldo de datos hecho antes del piloto.", "verify": "Copia verificada.", "blocking": false}
+    ]},
+    {"name": "Usuarios del piloto", "criteria": [
+      {"code": "U1", "title": "3 empresas y 6 creadores comprometidos (máx. 2 creadores por empresa).", "verify": "Lista con confirmación por escrito.", "blocking": true},
+      {"code": "U2", "title": "Guion de validación probado con 2 personas ajenas al equipo.", "verify": "Ajustes registrados.", "blocking": true},
+      {"code": "U3", "title": "Los testers saben qué esperar: alcance, duración y cómo dar feedback.", "verify": "Mensaje de bienvenida enviado.", "blocking": false}
+    ]},
+    {"name": "Operación y plan B", "criteria": [
+      {"code": "O1", "title": "Plan B probado: caída de red, de subida y de servidor.", "verify": "Simulacro con resultado documentado.", "blocking": true},
+      {"code": "O2", "title": "Responsable de soporte durante el piloto y estatus cada tercer día.", "verify": "Calendario acordado.", "blocking": false}
+    ]},
+    {"name": "Legal", "criteria": [
+      {"code": "L1", "title": "Términos mínimos aceptados: dueño del contenido, uso en portafolio, datos personales.", "verify": "Texto visible y aceptado en el registro.", "blocking": true}
+    ]}
+  ]
+}

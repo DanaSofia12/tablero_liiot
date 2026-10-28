@@ -1,0 +1,21 @@
+# Dependencias y compilados
+node_modules/
+frontend/dist/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Datos locales y secretos (nunca a git)
+.env
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

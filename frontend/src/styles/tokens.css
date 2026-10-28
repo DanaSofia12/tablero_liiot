@@ -1,0 +1,113 @@
+/* Liiot HQ · sistema visual «aurora»
+   Paleta del brandbook de Liiot (violeta, naranja, rosa, ámbar) llevada a luz, cromo y grano,
+   según el tablero de referencias: fondos casi negros, cintas de luz en degradado y textura de película. */
+:root {
+  --font-display: 'Unbounded Variable', 'Unbounded', system-ui, sans-serif;
+  --font-ui: 'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-pixel: 'Pixelify Sans', ui-monospace, 'Cascadia Mono', monospace;
+
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --rail: 86px;
+
+  --violet: #8b45cc;
+  --violet-deep: #5a228b;
+  --magenta: #e04b66;
+  --orange: #ff6a33;
+  --amber: #ffb547;
+  --lilac: #c9a6f2;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #fb5a7a;
+  --info: #60a5fa;
+
+  /* oscuro (por defecto) */
+  --bg: #07050d;
+  --ink: #f6f1ff;
+  --ink-2: rgba(246, 241, 255, 0.74);
+  --ink-3: rgba(246, 241, 255, 0.52);
+  --ink-4: rgba(246, 241, 255, 0.3);
+  --panel: rgba(18, 12, 31, 0.7);
+  --panel-2: rgba(32, 22, 52, 0.66);
+  --panel-solid: #120c20;
+  --field: rgba(255, 255, 255, 0.055);
+  --line: rgba(255, 255, 255, 0.085);
+  --line-2: rgba(255, 255, 255, 0.17);
+  --acc: #a874ec;
+  --acc-2: #ff7a45;
+  --grad: linear-gradient(115deg, #5a228b 0%, #8b45cc 28%, #e04b66 58%, #ff6a33 80%, #ffb547 100%);
+  --grad-hot: linear-gradient(115deg, #8b45cc 0%, #e04b66 55%, #ff6a33 100%);
+  --grad-soft: linear-gradient(135deg, rgba(139, 69, 204, 0.32), rgba(255, 106, 51, 0.18));
+  --chrome: conic-gradient(from 200deg at 50% 50%, #2a1446, #d8c2ff, #ff9a76, #5a228b, #ffe0cc, #8b45cc, #2a1446);
+  --aurora-a: rgba(139, 69, 204, 0.55);
+  --aurora-b: rgba(224, 75, 102, 0.38);
+  --aurora-c: rgba(255, 106, 51, 0.34);
+  --aurora-d: rgba(255, 181, 71, 0.24);
+  --grain: 0.11;
+  --shadow: 0 18px 50px -22px rgba(0, 0, 0, 0.7);
+  --glow: 0 0 0 1px rgba(168, 116, 236, 0.38), 0 12px 40px -12px rgba(139, 69, 204, 0.6);
+  --hi: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color-scheme: dark;
+}
+
+[data-mode='light'] {
+  --bg: #fff4ee;
+  --ink: #1d1029;
+  --ink-2: rgba(29, 16, 41, 0.74);
+  --ink-3: rgba(29, 16, 41, 0.54);
+  --ink-4: rgba(29, 16, 41, 0.3);
+  --panel: rgba(255, 255, 255, 0.66);
+  --panel-2: rgba(255, 255, 255, 0.8);
+  --panel-solid: #ffffff;
+  --field: rgba(45, 18, 70, 0.055);
+  --line: rgba(70, 25, 100, 0.1);
+  --line-2: rgba(70, 25, 100, 0.2);
+  --acc: #6d2fb0;
+  --acc-2: #dc4f1c;
+  --aurora-a: rgba(168, 116, 236, 0.36);
+  --aurora-b: rgba(255, 120, 160, 0.26);
+  --aurora-c: rgba(255, 145, 90, 0.3);
+  --aurora-d: rgba(255, 205, 110, 0.4);
+  --grain: 0.08;
+  --shadow: 0 18px 50px -26px rgba(90, 34, 139, 0.38);
+  --glow: 0 0 0 1px rgba(109, 47, 176, 0.25), 0 12px 40px -14px rgba(139, 69, 204, 0.38);
+  --hi: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  color-scheme: light;
+}
+
+/* Universo Bleepy: «planeta creativo» (provisional hasta la identidad de Saray) */
+[data-uni='bleepy'] {
+  --font-display: 'Fredoka Variable', 'Fredoka', system-ui, sans-serif;
+  --acc: #9b80ff;
+  --acc-2: #ff5fb4;
+  --grad: linear-gradient(115deg, #3dd6f5 0%, #7c5cff 34%, #ff4fa3 68%, #ffd45c 100%);
+  --grad-hot: linear-gradient(115deg, #7c5cff 0%, #ff4fa3 100%);
+  --grad-soft: linear-gradient(135deg, rgba(124, 92, 255, 0.3), rgba(61, 214, 245, 0.18));
+  --chrome: conic-gradient(from 200deg at 50% 50%, #1a1460, #bdf3ff, #ff9fd0, #5b2ee8, #fff3b0, #7c5cff, #1a1460);
+  --aurora-a: rgba(124, 92, 255, 0.5);
+  --aurora-b: rgba(255, 79, 163, 0.34);
+  --aurora-c: rgba(61, 214, 245, 0.28);
+  --aurora-d: rgba(255, 212, 92, 0.22);
+  --bg: #06051a;
+  --panel: rgba(16, 13, 48, 0.7);
+  --panel-2: rgba(30, 25, 80, 0.62);
+  --panel-solid: #110e36;
+}
+
+[data-uni='bleepy'][data-mode='light'] {
+  --bg: #f6f4ff;
+  --acc: #5b2ee8;
+  --acc-2: #d92f86;
+  --panel: rgba(255, 255, 255, 0.68);
+  --panel-2: rgba(255, 255, 255, 0.82);
+  --panel-solid: #ffffff;
+  --aurora-a: rgba(124, 92, 255, 0.3);
+  --aurora-b: rgba(255, 79, 163, 0.22);
+  --aurora-c: rgba(61, 214, 245, 0.28);
+  --aurora-d: rgba(255, 212, 92, 0.34);
+}
