@@ -53,7 +53,7 @@ Tercera ronda (27-oct, manda sobre las anteriores):
 2. Proyectos: los de `10_Proyectos` del vault más los que se creen en HQ. Para Bleepy se dice **piloto**, no «demo» ni «beta» (piloto 15-nov, respaldo 1-dic).
 3. Solo los tres fundadores.
 4. El token de Telegram vive solo en `.env` (ignorado por git) y nunca sale por la API.
-5. Commit y push solo cuando Dana lo pida. El código va a GitHub solo si el repositorio es **privado**: tiene nombres del equipo y datos internos de Bleepy.
+5. Commit y push solo cuando Dana lo pida. Repositorio: https://github.com/DanaSofia12/tablero_liiot, **público** (Dana lo confirmó el 27-oct sabiendo que se ven los nombres del equipo y los datos de Bleepy). Nunca subir secretos: `.env` y `backend/data/` quedan fuera de git.
 6. El vault solo lo toca la sincronización de HQ, y así: frontmatter de las notas de `10_Proyectos/*/01_Gestion/Tareas` y de las notas de proyecto, más las notas y carpetas nuevas que se creen desde HQ. Nunca el cuerpo de una nota existente y nunca borrar archivos.
 7. No iniciar sesión en Pinterest ni en otros sitios.
 
@@ -102,7 +102,6 @@ Verificado el 27-oct: pruebas del backend (5/5, una de ellas sincroniza con una 
 ## 5. Pendiente, en orden sugerido
 
 1. **Probar el bot de verdad**: Dana crea el bot con BotFather, pega el token en Seguimiento, vincula a los tres y al grupo, y prueba los botones (hecha, bloqueada con motivo, nueva fecha, comentario) y el ritual con «Enviar ahora».
-1. **GitHub**: el repositorio `DanaSofia12/tablero_liiot` estaba **público** el 27-oct; no se subió nada. Subir solo cuando sea privado (o si Dana confirma que lo quiere público).
 1. **Obsidian**: revisar con el equipo las 9 notas que HQ creó en Bleepy y los campos que agregó; documentar en el vault (plantilla `Entity_Tarea`) los estados nuevos `en_revision` y `bloqueada` si el equipo los adopta (eso toca el vault: pedir permiso antes).
 2. **Confirmar los avatares** con cada persona y ajustar rasgos en Ajustes (o en `backend/app/seed_data/bleepy.json` para el valor inicial).
 3. **Seguimiento que falta del plano**: aviso a Dana si una tarea vencida no tiene respuesta en 4 horas hábiles; check-in de tareas sin movimiento (3 días en progreso, o P0 cada 2 días hábiles); resumen diario opcional a Dana (por ejemplo 7:30).
