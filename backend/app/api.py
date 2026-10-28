@@ -378,14 +378,16 @@ async def create_review(payload: dict = Body(...)) -> dict:
 
 # ---------------------------------------------------------------- métricas y presencia
 @router.get("/metrics")
-async def metrics(project: str | None = None) -> dict:
-    """Indicadores del proyecto elegido; la carga del equipo cuenta las tareas de todos los proyectos."""
+async def metrics(project: str | None = None, team: str = "all") -> dict:
+    """Indicadores del proyecto elegido. La carga del equipo suma todos los proyectos, o solo ese con team=project."""
     with session_scope() as s:
-        team = svc.team_metrics(s)
+        project_id = _project(s, project).id
+        scope = project_id if team == "project" else None
+        load = svc.team_metrics(s, scope)
         return {
-            "project": svc.project_metrics(s, _project(s, project).id),
-            "team": team,
-            "suggestions": svc.suggestions(team, svc.tasks_all(s), svc.member_names(s)),
+            "project": svc.project_metrics(s, project_id),
+            "team": load,
+            "suggestions": svc.suggestions(load, svc.tasks_all(s, scope), svc.member_names(s)),
         }
 
 

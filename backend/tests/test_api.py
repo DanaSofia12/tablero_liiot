@@ -232,10 +232,59 @@ def test_textos_del_bot():
     with session_scope() as s:
         project = s.get(Project, "bleepy")
         names = {m.id: m.name for m in members_all(s)}
-        text = bot.weekly_group_text(project, project_metrics(s), team_metrics(s), tasks_all(s), names, date(2026, 10, 25))
-        ceo = bot.ceo_text(project_metrics(s), tasks_all(s), names, date(2026, 10, 25))
-    assert "Resumen semanal" in text and "Bleepy" in text
-    assert "Para ti, Dana" in ceo
+        text = bot.weekly_group_text(project, project_metrics(s, "bleepy"), team_metrics(s), tasks_all(s, "bleepy"), names, date(2026, 10, 25), ritual=True)
+        ceo = bot.ceo_text(project_metrics(s, "bleepy"), tasks_all(s), names, date(2026, 10, 25), "Dana")
+        card = bot.task_card_text(tasks_all(s, "bleepy")[0], names, date(2026, 10, 25))
+    assert "Así vamos en Bleepy" in text and "¡Buen fin de semana, equipo!" in text
+    assert "Tu resumen, Dana" in ceo
+    assert "¿Cómo vas con esta?" in card and "P1" not in card  # sin jerga: la prioridad va en palabras
     options = bot.date_options(date(2026, 10, 25))
     assert options[0][1] == date(2026, 10, 26)
     assert all(day > date(2026, 10, 25) for _, day in options)
+
+
+def test_el_bot_entiende_frases_normales():
+    from dataclasses import dataclass
+    from datetime import date
+
+    from app.chat import match_task, understand
+
+    @dataclass
+    class T:
+        key: str
+        title: str
+        owner_id: str
+
+    tasks = [T("BLP-3", "Tabla de precios base por pieza", "jd"), T("BLP-5", "Centralizar el diagrama de flujo", "dana"),
+             T("BLP-8", "Diagrama de procesos y casos de uso", "jd")]
+    today = date(2026, 10, 27)  # martes
+    projects, people = {"bleepy": "bleepy", "sst": "sst"}, [("juan david", "jd"), ("dana", "dana")]
+
+    def it(text):
+        return understand(text, today, projects, people)
+
+    assert it("Hola!").kind == "saludo"
+    assert it("hola, ¿qué tengo hoy?").kind == "hoy"
+    assert it("¿qué tengo esta semana?").kind == "semana"
+    assert it("¿cómo va el equipo?").kind == "equipo"
+    assert it("gracias!").kind == "gracias"
+    assert it("asdf qwer").kind == "desconocido"
+
+    done = it("Terminé la tabla de precios")
+    assert done.kind == "hecha" and match_task(done.phrase, done.key, tasks)[0].key == "BLP-3"
+    assert it("listo, terminé BLP-3").kind == "hecha"
+    assert it("el diagrama ya quedó listo para revisar").kind == "revision"
+
+    blocked = it("Algo me frena con BLP-5 porque falta el logo de Saray")
+    assert blocked.kind == "bloqueo" and blocked.key == "BLP-5" and blocked.reason == "Falta el logo de Saray"
+
+    moved = it("mueve la tabla de precios para el viernes")
+    assert moved.kind == "fecha" and moved.day == date(2026, 10, 30) and match_task(moved.phrase, None, tasks)[0].key == "BLP-3"
+
+    new = it("recuérdame revisión del diseño para Juan David en Bleepy mañana")
+    assert new.kind == "nueva" and new.title == "Revisión del diseño"
+    assert new.owner_id == "jd" and new.project_id == "bleepy" and new.day == date(2026, 10, 28)
+
+    vague = it("qué pasa con el diagrama")
+    task, candidates = match_task(vague.phrase, vague.key, tasks)
+    assert vague.kind == "ver" and task is None and {c.key for c in candidates} == {"BLP-5", "BLP-8"}

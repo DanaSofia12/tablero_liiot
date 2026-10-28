@@ -663,11 +663,17 @@ def zone_for(pct: int) -> str:
     return "verde"
 
 
+ACTIVE_STATUSES = ("en_progreso", "en_revision", "bloqueada")
+
+
 def workload(member: Member, tasks: list[Task], today: date) -> dict:
     mine = [t for t in tasks if t.owner_id == member.id]
     open_tasks = [t for t in mine if t.status != "hecha"]
     horizon = today + timedelta(days=14)
-    window = [t for t in open_tasks if t.due_date is None or t.due_date <= horizon]
+    # Cuenta lo que vence en 14 días (y lo vencido) más lo que ya está en marcha aunque no tenga fecha.
+    # Lo que espera sin fecha (backlog, p. ej. lo importado de Obsidian) no infla la carga: se informa aparte.
+    window = [t for t in open_tasks if (t.due_date and t.due_date <= horizon) or (t.due_date is None and t.status in ACTIVE_STATUSES)]
+    undated = sum(1 for t in open_tasks if t.due_date is None and t.status not in ACTIVE_STATUSES)
     points = sum(EFFORT_POINTS.get(t.effort, 2) for t in window)
     pct = round(points * 100 / member.capacity) if member.capacity else 0
     week_ago = utcnow() - timedelta(days=7)
@@ -687,6 +693,7 @@ def workload(member: Member, tasks: list[Task], today: date) -> dict:
         "pct": pct,
         "zone": zone_for(pct),
         "open": len(open_tasks),
+        "undated": undated,
         "inProgress": len(in_progress),
         "inReview": sum(1 for t in open_tasks if t.status == "en_revision"),
         "blocked": sum(1 for t in open_tasks if t.status == "bloqueada"),

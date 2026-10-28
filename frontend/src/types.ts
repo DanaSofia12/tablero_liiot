@@ -240,6 +240,7 @@ export interface Workload {
   pct: number
   zone: 'verde' | 'amarillo' | 'rosa'
   open: number
+  undated: number
   inProgress: number
   inReview: number
   blocked: number

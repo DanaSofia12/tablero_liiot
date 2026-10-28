@@ -22,6 +22,7 @@ import unicodedata
 from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import yaml
@@ -782,6 +783,7 @@ def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, re
     links = {link.task_id: link for link in s.exec(select(VaultLink))}
     links_by_note = {link.note_id: link for link in links.values()}
     by_legacy = {t.legacy_id: t for t in tasks.values() if t.legacy_id}
+    by_key = {(t.project_id, t.key.upper()): t for t in tasks.values()}
     index: dict[str, list[Note]] = {}
     available: set[str] = set()
     for pid, rel in dirs.items():
@@ -820,6 +822,12 @@ def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, re
             elif note_id in by_legacy and by_legacy[note_id].id not in links:
                 task = by_legacy[note_id]
                 links[task.id] = _first_link(s, task, tnote, people, result, root, today)
+            elif (twin := _twin(tnote, pid, by_key, links)) is not None:
+                # Otra instalación de HQ ya creó esta nota (trae «hq: CLAVE» y el mismo título): se vincula, no se duplica
+                if not twin.legacy_id:
+                    twin.legacy_id = note_id
+                    s.add(twin)
+                links[twin.id] = _first_link(s, twin, tnote, people, result, root, today)
             else:
                 task = _import_task(s, tnote, note_id, project, people)
                 links[task.id] = VaultLink(task_id=task.id, note_id=note_id, path=tnote.rel, base_json=base_json(tnote, task),
@@ -863,6 +871,16 @@ def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, re
                 result["archived"] += 1
                 result["changes"].append({"taskId": task.id, "info": info, "ownerId": task.owner_id, "key": task.key})
                 activity(f"{task.key} se archivó porque su nota ya no está en Obsidian")
+
+
+def _twin(tnote: Note, project_id: str, by_key: dict, links: dict) -> Task | None:
+    """Tarea de HQ sin vincular con la misma clave «hq» y casi el mismo título que la nota."""
+    key = str(tnote.fm.get("hq") or "").strip().upper()
+    task = by_key.get((project_id, key)) if key else None
+    if task is None or task.id in links:
+        return None
+    a, b = fold(task.title), fold(raw_fields(tnote)["title"])
+    return task if a == b or SequenceMatcher(None, a, b).ratio() >= 0.8 else None
 
 
 def _merge_linked(s: Session, task: Task, tnote: Note, link: VaultLink, people: People, result: dict, root: Path, today: date) -> None:

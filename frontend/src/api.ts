@@ -96,12 +96,13 @@ export function useProjectTasks(id?: string) {
   return { ...query, data: query.data?.filter((t) => t.projectId === pid) }
 }
 
-export function useMetrics(id?: string) {
+/** Indicadores del proyecto; la carga del equipo suma todos los proyectos o, con team='project', solo ese. */
+export function useMetrics(id?: string, team: 'all' | 'project' = 'all') {
   const { projectId } = useCurrentProject()
   const pid = id ?? projectId
   return useQuery({
-    queryKey: [...qk.metrics, pid],
-    queryFn: () => api.get<Metrics>(`/api/metrics?project=${encodeURIComponent(pid)}`),
+    queryKey: [...qk.metrics, pid, team],
+    queryFn: () => api.get<Metrics>(`/api/metrics?project=${encodeURIComponent(pid)}&team=${team}`),
     enabled: Boolean(pid),
   })
 }

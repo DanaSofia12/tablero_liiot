@@ -20,6 +20,17 @@ Opciones desde PowerShell:
 
 Si Windows dice que *la ejecución de scripts está deshabilitada*, la política de PowerShell de ese equipo no permite scripts locales. Quien administre el equipo puede permitirlos solo para su usuario con `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. Si bajaste el proyecto como ZIP, desbloquéalo una vez con `Get-ChildItem -Recurse | Unblock-File` dentro de la carpeta.
 
+## Instalar en otro computador
+
+1. Instala, gratis: [Git](https://git-scm.com/download/win), [Python 3.12](https://www.python.org/downloads/) (marca *Add python.exe to PATH*) y [Node.js LTS](https://nodejs.org/).
+2. Descarga el código en PowerShell: `git clone https://github.com/DanaSofia12/tablero_liiot.git liiot-hq`. Sin Git: en GitHub, *Code → Download ZIP*; descomprímelo y, dentro de la carpeta, corre una vez `Get-ChildItem -Recurse | Unblock-File`.
+3. Si Windows no deja ejecutar scripts, corre una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+4. Doble clic en `iniciar.cmd`. La primera vez instala todo (unos minutos).
+5. **Obsidian**: ese PC necesita el vault (Google Drive para escritorio, en `G:\Mi unidad\Liiot`, o la ruta que pongas en **Ajustes → Obsidian**). Al arrancar, HQ trae los proyectos y las tareas del vault sin duplicar nada.
+6. **Telegram**: el token no viaja con el código; pégalo otra vez en **Seguimiento**.
+7. **Un solo HQ encendido a la vez** (por el bot y por la sincronización con Obsidian). Si te mudas de PC, cierra el anterior. Para llevar también la bitácora, los avatares y los ajustes, copia `backend\data\hq.db` del PC viejo al nuevo, con los dos HQ cerrados.
+8. Para actualizar a la última versión: `git pull` en la carpeta y vuelve a abrir `iniciar.cmd` (compila solo lo que cambió).
+
 ## Bot de Telegram (gratis)
 
 1. En Telegram abre **@BotFather**, escribe `/newbot` y ponle un nombre (por ejemplo *Liiot HQ*) y un usuario que termine en `bot`.
@@ -32,7 +43,9 @@ El bot funciona mientras HQ esté abierto en este PC: se mantiene conectado a Te
 
 - **Ritual semanal:** sábados a las 6:00 p. m. (se cambia en Seguimiento). Manda el resumen al grupo, pregunta por privado a cada persona por sus tareas y le envía a Dana el resumen de CEO.
 - **Avisos:** recordatorios de vencimiento, alertas de bloqueo a Dana y a quien puede desbloquear, celebraciones en el grupo.
-- **Comandos:** `/hoy` `/semana` `/pendientes` `/estado` `/nueva` `/equipo` `/resumen` `/silencio` `/ayuda`. Las respuestas con botones (Hecho, En curso, Bloqueada, Nueva fecha…) actualizan HQ al instante.
+- **Se le escribe normal**, como a alguien del equipo: «¿qué tengo hoy?», «terminé la tabla de precios», «algo me frena con BLP-5 porque falta el logo», «mueve BLP-3 para el viernes», «nueva tarea: llamar a la tercera empresa el jueves», «¿cómo va el equipo?». Entiende fechas como «mañana», «el viernes», «el 5 de noviembre» o «en 3 días», y si una frase puede ser varias tareas, pregunta cuál. Funciona con reglas propias: gratis, sin IA de pago.
+- **Botones:** en cada tarea («Ya la terminé», «La estoy haciendo», «Otra fecha», «Algo me frena»…) y abajo del chat (hoy, mi semana, el equipo, nueva tarea). Todo actualiza HQ al instante.
+- **Comandos**, para quien los prefiera: `/hoy` `/semana` `/pendientes` `/estado` `/nueva` `/equipo` `/resumen` `/silencio` `/ayuda`.
 
 ## Obsidian (sincronización en dos vías)
 
