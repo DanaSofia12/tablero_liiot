@@ -15,6 +15,47 @@ const KIND_LABEL: Record<string, string> = {
   respuesta: 'Respuesta',
 }
 
+/** Campo para pegar el token de BotFather: HQ lo valida con Telegram y reinicia el bot sin cerrar nada. */
+function TokenForm({ onDone }: { onDone: () => void }) {
+  const { toast } = useUI()
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  return (
+    <form
+      className="row"
+      style={{ gap: 8, marginTop: 12 }}
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!token.trim()) return
+        setBusy(true)
+        try {
+          await api.post('/api/telegram/token', { token: token.trim() })
+          setToken('')
+          onDone()
+        } catch (err) {
+          toast((err as Error).message, 'bad')
+        } finally {
+          setBusy(false)
+        }
+      }}
+    >
+      <input
+        className="input"
+        type="password"
+        autoComplete="off"
+        spellCheck={false}
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        placeholder="Pega aquí el token de BotFather"
+        aria-label="Token del bot de Telegram"
+      />
+      <button type="submit" className="btn primary" disabled={!token.trim() || busy}>
+        {busy ? 'Probando…' : 'Conectar'}
+      </button>
+    </form>
+  )
+}
+
 export default function FollowupPage() {
   const tg = useTelegram().data
   const checkins = useCheckins().data ?? []
@@ -77,36 +118,73 @@ export default function FollowupPage() {
 
       <div className="follow-grid">
         <div className="stack" style={{ gap: 16 }}>
-          {!status.running && (
-            <Panel title="Activar el bot (una vez)" icon={<Bot size={18} style={{ color: 'var(--acc)' }} />}>
+          {status.running ? (
+            <Panel title="Bot conectado" icon={<Bot size={18} style={{ color: 'var(--ok)' }} />}>
+              <p style={{ fontSize: 13.5 }}>
+                Tu bot es <b>@{status.botUsername}</b>. Sigue los pasos 4 y 5 de abajo si alguien todavía no lo vinculó.
+              </p>
+              <div className="row" style={{ marginTop: 10 }}>
+                <a className="btn sm" href={`https://t.me/${status.botUsername}`} target="_blank" rel="noreferrer">
+                  <ExternalLink size={14} /> Abrir el bot en Telegram
+                </a>
+                <button
+                  type="button"
+                  className="btn sm ghost"
+                  onClick={async () => {
+                    if (!window.confirm('¿Desconectar el bot? Dejará de enviar mensajes hasta que pegues un token otra vez.')) return
+                    try {
+                      await api.del('/api/telegram/token')
+                      refresh(qk.telegram)
+                      toast('Bot desconectado', 'info')
+                    } catch (e) {
+                      toast((e as Error).message, 'bad')
+                    }
+                  }}
+                >
+                  Desconectar
+                </button>
+              </div>
+            </Panel>
+          ) : (
+            <Panel title="Activar el bot (una vez, gratis)" icon={<Bot size={18} style={{ color: 'var(--acc)' }} />}>
               {status.error && <p style={{ color: 'var(--bad)', marginBottom: 10, fontSize: 13 }}>Error de Telegram: {status.error}</p>}
               <ol className="steps">
                 <li>
                   <span>
-                    En Telegram, abre <b>@BotFather</b>, escribe <code>/newbot</code> y ponle un nombre, por ejemplo <b>Liiot HQ</b>.
+                    En Telegram, busca <b>@BotFather</b> (el que tiene la insignia azul), escribe <code>/newbot</code>, ponle un nombre (por ejemplo <b>Liiot HQ</b>) y
+                    un usuario que termine en <code>bot</code> (por ejemplo <code>liiot_hq_bot</code>).
                   </span>
                 </li>
                 <li>
-                  <span>
-                    Copia el token y pégalo en el archivo <code>.env</code> de la carpeta del proyecto: <code>TELEGRAM_BOT_TOKEN=…</code>
-                  </span>
+                  <span>BotFather te responde con un token largo, algo como <code>1234567890:AAH…</code>. Cópialo completo.</span>
                 </li>
                 <li>
-                  <span>
-                    Reinicia HQ (cierra su ventana y abre <code>iniciar.cmd</code> otra vez). Arriba debe aparecer «Bot activo». Funciona mientras este PC esté encendido.
-                  </span>
-                </li>
-                <li>
-                  <span>Cada persona abre su enlace de abajo y toca «Iniciar». Telegram no deja que un bot escriba primero.</span>
-                </li>
-                <li>
-                  <span>
-                    Agrega el bot al grupo del equipo y escribe <code>/vincular_grupo</code> en el grupo.
-                  </span>
+                  <span>Pégalo aquí y toca «Conectar». HQ lo prueba con Telegram y lo guarda solo en este PC (archivo .env).</span>
                 </li>
               </ol>
+              <TokenForm
+                onDone={() => {
+                  refresh(qk.telegram)
+                  toast('¡Bot conectado! Ahora vincula a cada persona con su enlace.', 'party')
+                }}
+              />
+              <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                El bot funciona mientras HQ esté abierto en este PC. No compartas el token: quien lo tenga puede hablar como tu bot.
+              </p>
             </Panel>
           )}
+          <Panel title="Vincular al equipo">
+            <ol className="steps" style={{ counterReset: 's 3' }}>
+              <li>
+                <span>Cada persona abre su enlace (en «Personas», justo abajo) y toca «Iniciar». Telegram no deja que un bot escriba primero.</span>
+              </li>
+              <li>
+                <span>
+                  Agrega el bot al grupo del equipo y escribe <code>/vincular_grupo</code> en ese grupo. Ahí llegan el resumen de los sábados y las celebraciones.
+                </span>
+              </li>
+            </ol>
+          </Panel>
 
           <Panel title="Personas" icon={<Users size={18} style={{ color: 'var(--acc)' }} />}>
             {status.members.map((sm) => {

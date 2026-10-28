@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProjectDialog } from './components/ProjectDialog'
 import { Shell } from './components/Shell'
 import { TaskDrawer } from './components/TaskDrawer'
 import { TaskForm } from './components/TaskForm'
@@ -47,6 +48,7 @@ export default function App() {
       </Suspense>
       <TaskDrawer />
       <TaskForm />
+      <ProjectDialog />
       <Toasts />
     </Shell>
   )

@@ -38,6 +38,10 @@ class Project(SQLModel, table=True):
     phase: str = ""
     key_prefix: str = "BLP"
     theme: str = "bleepy"
+    color: str = "#8B45CC"
+    archived: bool = False
+    vault_dir: Optional[str] = None
+    order: int = 0
 
 
 class Stage(SQLModel, table=True):
@@ -79,6 +83,7 @@ class Task(SQLModel, table=True):
     updated_at: datetime
     completed_at: Optional[datetime] = None
     sort: float = 0
+    phase: str = ""
 
 
 class TaskEvent(SQLModel, table=True):
@@ -129,6 +134,25 @@ class RubricReview(SQLModel, table=True):
 class Setting(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value_json: str = "{}"
+
+
+class VaultLink(SQLModel, table=True):
+    """Tarea ↔ nota de Obsidian, con lo último sincronizado de cada lado (para la fusión en tres vías)."""
+
+    task_id: int = Field(primary_key=True)
+    note_id: str = Field(index=True)
+    path: str
+    base_json: str = "{}"
+    missing: int = 0
+    synced_at: Optional[datetime] = None
+
+
+class VaultProjectLink(SQLModel, table=True):
+    project_id: str = Field(primary_key=True)
+    note_id: str = Field(index=True)
+    dir: str
+    base_json: str = "{}"
+    synced_at: Optional[datetime] = None
 
 
 class CheckIn(SQLModel, table=True):

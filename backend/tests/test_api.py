@@ -5,6 +5,7 @@ import tempfile
 os.environ["HQ_DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["HQ_STATIC_DIR"] = os.path.join(tempfile.mkdtemp(), "sin-build")
+os.environ["HQ_VAULT_PATH"] = "off"  # las pruebas nunca tocan la bóveda real
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -91,6 +92,125 @@ def test_seed_y_flujo_de_tareas():
 
         page = c.get("/tareas")
         assert page.status_code == 200 and "Liiot HQ" in page.text
+
+
+def test_proyectos_nuevos():
+    with TestClient(app) as c:
+        created = c.post("/api/projects", json={"name": "Marketing Liiot", "keyPrefix": "mkt", "leadId": "jd", "basicRubric": True})
+        assert created.status_code == 200, created.text
+        project = created.json()
+        assert project["keyPrefix"] == "MKT" and project["code"] == "PRJ-MKT" and project["id"] == "marketing-liiot"
+        assert c.post("/api/projects", json={"name": "marketing liiot"}).status_code == 400
+        assert c.post("/api/projects", json={"name": "Otro", "keyPrefix": "BLP"}).status_code == 400
+
+        listed = {p["id"]: p for p in c.get("/api/projects").json()}
+        assert {"bleepy", "marketing-liiot"} <= set(listed)
+        assert listed["bleepy"]["counts"]["total"] >= 23
+
+        task = c.post("/api/tasks", json={"title": "Calendario de contenidos", "projectId": "marketing-liiot", "actorId": "jd"}).json()
+        assert task["key"] == "MKT-1" and task["projectId"] == "marketing-liiot"
+        only = c.get("/api/tasks?project=marketing-liiot").json()
+        assert [t["key"] for t in only] == ["MKT-1"]
+
+        rub = c.get("/api/rubric?project=marketing-liiot").json()
+        assert sum(len(cat["criteria"]) for cat in rub["categories"]) == 6
+        metrics = c.get("/api/metrics?project=marketing-liiot").json()
+        assert metrics["project"]["tasksTotal"] == 1 and metrics["project"]["projectId"] == "marketing-liiot"
+        assert c.get("/api/projects/no-existe").status_code == 404
+
+
+def _write(path, text, offset=0):
+    import time
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    stamp = time.time() + offset
+    os.utime(path, (stamp, stamp))
+
+
+def test_sincronizacion_con_obsidian(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from app import config, vault
+    from app import services as svc
+    from app.db import init_db, session_scope
+    from app.models import Task, VaultLink
+    from app.seed import seed_if_empty
+    from sqlmodel import select
+
+    init_db()
+    seed_if_empty()
+    monkeypatch.setattr(config, "VAULT_PATH", str(tmp_path))
+    vault._cache.clear()
+    projects = tmp_path / "10_Proyectos"
+    _write(projects / "Bleepy" / "Bleepy.md", "---\nid: PRJ-LCOM\ntype: project\nlider:\nfecha_entrega:\n---\n\n# Bleepy\n")
+    bleepy_note = projects / "Bleepy" / "01_Gestion" / "Tareas" / "Bleepy Estimar costos infraestructura.md"
+    body = "\n# Estimar costos infraestructura - Bleepy 10-oct\n\nEstimar costos de infraestructura.\n\nOrigen: reunión.\n"
+    _write(bleepy_note, "---\nid: TSK-20261013-14\ntype: task\nproject: \"PRJ-LCOM\"\nstatus: en_progreso\n"
+                        "responsable: \"Jean Pierre Ortiz Murcia\"\ncategoria: \"infraestructura\"\ntags:\n  - bleepy\n"
+                        "created: 2026-10-13\nupdated: 2026-10-13\n---\n" + body, offset=-86400 * 10)
+    _write(projects / "SST" / "SST.md", "---\nid: PRJ-SST\ntype: project\nlider: \"Dana\"\n---\n\n# SST\n\n## Descripción\n\nPlataforma SG-SST.\n")
+    sst_dir = projects / "SST" / "01_Gestion" / "Tareas"
+    _write(sst_dir / "Hacer demo.md", "---\nid: TSK-20261006-45\ntype: task\nproject: \"PRJ-SST\"\nstatus: por_hacer\nfase: \"fase_1\"\n"
+                                      "responsable: \"David\"\ncategoria: \"\"\ntags: []\ncreated: 2026-10-06\nupdated: 2026-10-06\n---\n\n# Hacer demo\n\nMostrar la demo.\n")
+    _write(sst_dir / "API CRUD empresas.md", "---\nid: TSK-20261006-12\ntype: task\nproject: \"PRJ-SST\"\nstatus: hecho\n"
+                                             "responsable: \"El grupo\"\ncategoria: \"\"\ntags: []\ncreated: 2026-10-06\n---\n\n# API CRUD empresas\n")
+
+    first = vault.sync_once()
+    assert first["ok"], first
+    with session_scope() as s:
+        sst = s.get(svc.Project, "sst")
+        assert sst is not None and sst.key_prefix == "SST" and sst.lead_id == "dana" and sst.summary == "Plataforma SG-SST."
+        sst_tasks = {t.legacy_id: t for t in svc.tasks_all(s, "sst")}
+        demo, api = sst_tasks["TSK-20261006-45"], sst_tasks["TSK-20261006-12"]
+        assert demo.owner_id == "jd" and demo.phase == "fase_1" and demo.summary == "Mostrar la demo." and demo.status == "por_hacer"
+        assert api.status == "hecha" and api.type == "desarrollo" and api.owner_id == "dana"  # «El grupo» → líder del proyecto
+        blp11 = s.exec(select(Task).where(Task.key == "BLP-11")).one()
+        assert s.get(VaultLink, blp11.id) is not None
+        bleepy_open = len(svc.tasks_all(s, "bleepy"))
+    linked = bleepy_note.read_text(encoding="utf-8")
+    assert "hq: BLP-11" in linked and "prioridad:" in linked and linked.endswith(body)  # el cuerpo no se toca
+    assert "lider: \"Dana\"" in (projects / "Bleepy" / "Bleepy.md").read_text(encoding="utf-8")
+    # cada tarea de Bleepy tiene su nota: la que ya existía más las que se crearon
+    assert len(list((projects / "Bleepy" / "01_Gestion" / "Tareas").glob("*.md"))) == bleepy_open
+
+    # Obsidian → HQ: la demo pasa a hecho en la nota
+    demo_note = sst_dir / "Hacer demo.md"
+    _write(demo_note, demo_note.read_text(encoding="utf-8").replace("status: por_hacer", "status: hecho"), offset=60)
+    second = vault.sync_once()
+    assert second["updatedHQ"] >= 1
+    with session_scope() as s:
+        assert s.get(Task, demo.id).status == "hecha"
+
+    # HQ → Obsidian: la API pasa a revisión desde HQ
+    with session_scope() as s:
+        task = s.get(Task, api.id)
+        svc.apply_patch(s, task, {"status": "en_revision", "dueDate": "2026-11-20"}, "dana")
+        s.commit()
+    vault.sync_once()
+    api_text = (sst_dir / "API CRUD empresas.md").read_text(encoding="utf-8")
+    assert "status: en_revision" in api_text and "vence: 2026-11-20" in api_text and api_text.endswith("# API CRUD empresas\n")
+
+    # Proyecto nuevo en HQ → carpeta y nota en Obsidian; tarea nueva → nota en su carpeta
+    with session_scope() as s:
+        new_project = svc.create_project(s, {"name": "Ventas", "leadId": "jd"})
+        s.commit()
+        svc.create_task(s, {"projectId": new_project.id, "title": "Lista de prospectos", "ownerId": "jd"}, "jd")
+        s.commit()
+    vault.sync_once()
+    main_note = projects / "Ventas" / "Ventas.md"
+    assert main_note.is_file() and "type: project" in main_note.read_text(encoding="utf-8")
+    created = (projects / "Ventas" / "01_Gestion" / "Tareas" / "Lista de prospectos.md").read_text(encoding="utf-8")
+    assert "responsable: \"Juan David\"" in created and "hq: VEN-1" in created and "# Lista de prospectos" in created
+    assert "id: PRJ-VEN" in main_note.read_text(encoding="utf-8")
+
+    # Nota borrada en Obsidian → la tarea se archiva (tras dos revisiones seguidas)
+    demo_note.unlink()
+    vault.sync_once()
+    vault.sync_once()
+    with session_scope() as s:
+        assert s.get(Task, demo.id).archived is True
+    assert Path(tmp_path).is_dir()
 
 
 def test_bot_se_construye_sin_red():

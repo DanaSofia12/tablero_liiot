@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -115,8 +117,11 @@ def stages_all(s: Session, project_id: str = config.DEFAULT_PROJECT) -> list[Sta
     return list(s.exec(select(Stage).where(Stage.project_id == project_id).order_by(Stage.order)))
 
 
-def tasks_all(s: Session, project_id: str = config.DEFAULT_PROJECT, include_archived: bool = False) -> list[Task]:
-    query = select(Task).where(Task.project_id == project_id)
+def tasks_all(s: Session, project_id: str | None = None, include_archived: bool = False) -> list[Task]:
+    """Tareas de un proyecto, o de todos si project_id es None."""
+    query = select(Task)
+    if project_id:
+        query = query.where(Task.project_id == project_id)
     if not include_archived:
         query = query.where(Task.archived == False)  # noqa: E712
     return list(s.exec(query.order_by(Task.sort, Task.id)))
@@ -127,6 +132,20 @@ def criteria_all(s: Session, project_id: str = config.DEFAULT_PROJECT) -> list[R
     if not cat_ids:
         return []
     return list(s.exec(select(RubricCriterion).where(RubricCriterion.category_id.in_(cat_ids))))
+
+
+def projects_all(s: Session, include_archived: bool = False) -> list[Project]:
+    query = select(Project)
+    if not include_archived:
+        query = query.where(Project.archived == False)  # noqa: E712
+    return list(s.exec(query.order_by(Project.order, Project.name)))
+
+
+def default_project_id(s: Session) -> str:
+    if s.get(Project, config.DEFAULT_PROJECT):
+        return config.DEFAULT_PROJECT
+    first = projects_all(s)
+    return first[0].id if first else config.DEFAULT_PROJECT
 
 
 def task_by_key(s: Session, key: str) -> Task | None:
@@ -164,8 +183,8 @@ def member_out(m: Member) -> dict:
     }
 
 
-def project_out(p: Project) -> dict:
-    return {
+def project_out(p: Project, tasks: list[Task] | None = None) -> dict:
+    out = {
         "id": p.id,
         "code": p.code,
         "name": p.name,
@@ -176,7 +195,20 @@ def project_out(p: Project) -> dict:
         "phase": p.phase,
         "keyPrefix": p.key_prefix,
         "theme": p.theme,
+        "color": p.color,
+        "archived": p.archived,
+        "vaultDir": p.vault_dir,
+        "order": p.order,
     }
+    if tasks is not None:
+        mine = [t for t in tasks if t.project_id == p.id]
+        out["counts"] = {
+            "total": len(mine),
+            "open": sum(1 for t in mine if t.status != "hecha"),
+            "done": sum(1 for t in mine if t.status == "hecha"),
+            "blocked": sum(1 for t in mine if t.status == "bloqueada"),
+        }
+    return out
 
 
 def stage_out(st: Stage) -> dict:
@@ -191,11 +223,13 @@ def stage_out(st: Stage) -> dict:
     }
 
 
-def task_out(t: Task) -> dict:
+def task_out(t: Task, vault_path: str | None = None) -> dict:
     return {
         "id": t.id,
         "key": t.key,
         "projectId": t.project_id,
+        "phase": t.phase,
+        "vaultPath": vault_path,
         "title": t.title,
         "summary": t.summary,
         "type": t.type,
@@ -320,7 +354,7 @@ def create_task(s: Session, data: dict, actor: str, source: str = "web") -> Task
     title = str(data.get("title") or "").strip()
     if not title:
         raise ValueError("La tarea necesita un título.")
-    project = s.get(Project, data.get("projectId") or config.DEFAULT_PROJECT)
+    project = s.get(Project, data.get("projectId") or default_project_id(s))
     if project is None:
         raise ValueError("El proyecto no existe.")
     owner = data.get("ownerId") or actor
@@ -351,12 +385,18 @@ def create_task(s: Session, data: dict, actor: str, source: str = "web") -> Task
         rubric=to_csv(data.get("rubric") or []),
         effort=data.get("effort") if data.get("effort") in EFFORT_POINTS else "M",
         origin=data.get("origin") or ("Telegram" if source == "telegram" else "HQ"),
+        legacy_id=data.get("legacyId") or None,
+        phase=str(data.get("phase") or "").strip(),
         created_at=now,
         updated_at=now,
     )
     if task.status == "hecha":
         task.completed_at = now
         task.progress = 100
+    if task.status == "bloqueada":
+        task.blocker_reason = str(data.get("blockerReason") or "Sin detalle").strip()
+        task.blocker_waiting_on = data.get("blockerWaitingOn") or None
+        task.blocked_since = now
     s.add(task)
     s.flush()
     log_event(s, task.id, actor, source, "creacion", "Creó la tarea")
@@ -376,6 +416,7 @@ SIMPLE_FIELDS = {
     "progress": "progress",
     "sort": "sort",
     "origin": "origin",
+    "phase": "phase",
 }
 
 
@@ -399,7 +440,7 @@ def apply_patch(s: Session, task: Task, patch: dict, actor: str, source: str = "
             value = max(0, min(100, int(value or 0)))
         elif attr == "sort":
             value = float(value or 0)
-        elif attr in ("title", "summary", "origin"):
+        elif attr in ("title", "summary", "origin", "phase"):
             value = str(value or "").strip()
             if attr == "title" and not value:
                 raise ValueError("El título no puede quedar vacío.")
@@ -439,6 +480,8 @@ def apply_patch(s: Session, task: Task, patch: dict, actor: str, source: str = "
             log_event(s, task.id, actor, source, "etapa", "Cambió la etapa")
         elif attr == "start_date":
             log_event(s, task.id, actor, source, "fecha", f"Inicio: {fmt_date(value)}")
+        elif attr == "phase":
+            log_event(s, task.id, actor, source, "etapa", f"Fase: {value or 'sin fase'}")
         setattr(task, attr, value)
 
     if "collaborators" in patch:
@@ -717,7 +760,8 @@ def project_metrics(s: Session, project_id: str = config.DEFAULT_PROJECT) -> dic
     }
 
 
-def team_metrics(s: Session, project_id: str = config.DEFAULT_PROJECT) -> list[dict]:
+def team_metrics(s: Session, project_id: str | None = None) -> list[dict]:
+    """Carga de cada persona; sin project_id cuenta las tareas de todos los proyectos."""
     tasks = tasks_all(s, project_id)
     today = local_today()
     return [workload(m, tasks, today) for m in members_all(s)]
@@ -757,7 +801,7 @@ def within_hours(m: Member, moment: datetime) -> bool:
     return start <= current < end if start <= end else (current >= start or current < end)
 
 
-def presence(s: Session, ignore_hours: bool = False, project_id: str = config.DEFAULT_PROJECT) -> list[dict]:
+def presence(s: Session, ignore_hours: bool = False, project_id: str | None = None) -> list[dict]:
     tasks = tasks_all(s, project_id)
     now, lnow = utcnow(), local_now()
     out = []
@@ -842,17 +886,130 @@ def recent_checkins(s: Session, limit: int = 60) -> list[CheckIn]:
 
 
 def export_all(s: Session) -> dict:
-    project_id = config.DEFAULT_PROJECT
-    project = s.get(Project, project_id)
-    tasks = tasks_all(s, project_id, include_archived=True)
+    projects = projects_all(s, include_archived=True)
+    tasks = tasks_all(s, include_archived=True)
     return {
         "exportedAt": iso_dt(utcnow()),
-        "project": project_out(project) if project else None,
+        "projects": [project_out(p, tasks) for p in projects],
         "members": [member_out(m) for m in members_all(s)],
-        "stages": [stage_out(st) for st in stages_all(s, project_id)],
+        "stages": [stage_out(st) for p in projects for st in stages_all(s, p.id)],
         "tasks": [task_out(t) for t in tasks],
         "events": [event_out(e) for e in s.exec(select(TaskEvent).order_by(TaskEvent.at))],
-        "rubric": rubric_overview(s, project_id),
+        "rubrics": {p.id: rubric_overview(s, p.id) for p in projects},
         "telegram": telegram_settings(s),
         "checkins": [checkin_out(c) for c in recent_checkins(s, 500)],
     }
+
+
+# ---------------------------------------------------------------- proyectos
+PROJECT_COLORS = ["#8B45CC", "#E04B66", "#FF6A33", "#22A06B", "#2F80ED", "#E8A317", "#7C5CFF", "#0FA3A3"]
+
+
+def slugify(text: str) -> str:
+    folded = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", folded).strip("-")
+
+
+def derive_prefix(code: str, name: str, taken: set[str]) -> str:
+    """Prefijo de las claves de tarea (SST-12): del código PRJ-… (PRJ-LANDING → LND) o de las 3 primeras letras del nombre."""
+    raw = re.sub(r"[^A-Z0-9]", "", re.sub(r"^PRJ-", "", (code or "").upper()))
+    if len(raw) > 4:
+        raw = (raw[0] + "".join(c for c in raw[1:] if c not in "AEIOU"))[:3]
+    if not raw:
+        raw = re.sub(r"[^A-Z0-9]", "", slugify(name).upper())[:3]
+    raw = raw or "PRY"
+    candidate, n = raw, 2
+    while candidate in taken:
+        candidate, n = f"{raw}{n}", n + 1
+    return candidate
+
+
+def create_project(s: Session, data: dict) -> Project:
+    name = str(data.get("name") or "").strip()
+    if not name:
+        raise ValueError("El proyecto necesita un nombre.")
+    existing = projects_all(s, include_archived=True)
+    if any(p.name.lower() == name.lower() for p in existing):
+        raise ValueError(f"Ya existe un proyecto llamado «{name}».")
+    taken = {p.key_prefix for p in existing}
+    prefix = re.sub(r"[^A-Z0-9]", "", str(data.get("keyPrefix") or "").upper())[:5]
+    if prefix and prefix in taken:
+        raise ValueError(f"El prefijo {prefix} ya lo usa otro proyecto.")
+    prefix = prefix or derive_prefix("", name, taken)
+    if len(prefix) < 2:
+        raise ValueError("El prefijo necesita al menos 2 letras.")
+    lead = data.get("leadId") or None
+    _check_member(s, lead, "Líder")
+    base_id, pid, n = slugify(name) or prefix.lower(), slugify(name) or prefix.lower(), 2
+    ids = {p.id for p in existing}
+    while pid in ids:
+        pid, n = f"{base_id}-{n}", n + 1
+    codes = {p.code for p in existing}
+    code = f"PRJ-{prefix}"
+    if code in codes:
+        code = f"PRJ-{prefix}-{len(existing) + 1}"
+    color = str(data.get("color") or "") or PROJECT_COLORS[len(existing) % len(PROJECT_COLORS)]
+    project = Project(
+        id=pid,
+        code=code,
+        name=name,
+        summary=str(data.get("summary") or "").strip(),
+        lead_id=lead,
+        pilot_date=parse_date(data.get("pilotDate")),
+        phase=str(data.get("phase") or "").strip(),
+        key_prefix=prefix,
+        theme="liiot",
+        color=color[:9],
+        order=max((p.order for p in existing), default=0) + 1,
+    )
+    s.add(project)
+    return project
+
+
+def update_project(s: Session, project: Project, data: dict) -> None:
+    for key, attr in (("summary", "summary"), ("phase", "phase"), ("name", "name")):
+        if key in data:
+            value = str(data[key] or "").strip()
+            if attr == "name" and not value:
+                raise ValueError("El nombre no puede quedar vacío.")
+            setattr(project, attr, value)
+    if "pilotDate" in data:
+        project.pilot_date = parse_date(data["pilotDate"])
+    if "backupDate" in data:
+        project.backup_date = parse_date(data["backupDate"])
+    if "leadId" in data:
+        _check_member(s, data["leadId"], "Líder")
+        project.lead_id = data["leadId"] or None
+    if "color" in data and data["color"]:
+        project.color = str(data["color"])[:9]
+    if "archived" in data:
+        project.archived = bool(data["archived"])
+    s.add(project)
+
+
+BASIC_RUBRIC = [
+    ("Funciona de punta a punta", [
+        ("F1", "El flujo principal funciona de inicio a fin sin ayuda del equipo", "Una persona nueva lo completa sola", True),
+        ("F2", "Los errores comunes muestran un mensaje claro", "Probar con datos incompletos", False),
+    ]),
+    ("Listo para las personas usuarias", [
+        ("U1", "Las personas del piloto confirmaron fecha y acceso", "Lista con nombre y fecha", True),
+        ("U2", "Hay una forma de recoger comentarios", "Formulario o canal activo", False),
+    ]),
+    ("Operación", [
+        ("O1", "Hay un plan B si algo falla el día del lanzamiento", "Responsable y pasos escritos", True),
+        ("O2", "Los datos tienen copia de seguridad", "Última copia de esta semana", False),
+    ]),
+]
+
+
+def add_basic_rubric(s: Session, project_id: str) -> None:
+    """Rúbrica de lanzamiento mínima para un proyecto nuevo (se puede editar después)."""
+    if s.exec(select(RubricCategory).where(RubricCategory.project_id == project_id)).first():
+        raise ValueError("Este proyecto ya tiene rúbrica.")
+    for order, (name, criteria) in enumerate(BASIC_RUBRIC):
+        category = RubricCategory(project_id=project_id, order=order, name=name)
+        s.add(category)
+        s.flush()
+        for c_order, (code, title, verify, blocking) in enumerate(criteria):
+            s.add(RubricCriterion(category_id=category.id, code=code, title=title, verify=verify, blocking=blocking, order=c_order))

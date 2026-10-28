@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Ban, Clock, Hourglass, Orbit, Rocket, Sparkles, TriangleAlert } from 'lucide-react'
-import { api, qk, useMembers, useMetrics, usePresence, useProject, useRefresh, useTasks } from '../api'
+import { api, qk, useMembers, useMetrics, usePresence, useProject, useProjectTasks, useRefresh } from '../api'
 import { MemberHead, Meter, Panel, PresenceChip, Toggle, useMemberMap } from '../components/bits'
 import { daysBetween, fmtDay, relativeDue, todayISO } from '../lib/format'
 import { usePrefs } from '../prefs'
@@ -25,7 +25,7 @@ export default function OfficePage() {
   const members = useMembers().data ?? []
   const memberMap = useMemberMap()
   const presence = usePresence().data ?? []
-  const tasks = useTasks().data ?? []
+  const tasks = useProjectTasks().data ?? []
   const metrics = useMetrics().data
   const project = useProject().data
   const refresh = useRefresh()

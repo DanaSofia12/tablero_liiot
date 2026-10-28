@@ -1,12 +1,14 @@
 """Rutas HTTP de Liiot HQ (todas bajo /api)."""
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
-from . import bot, config
+from . import bot, config, vault
 from . import services as svc
 from .catalog import (
     CRITERION_STATES,
@@ -18,6 +20,8 @@ from .catalog import (
     TASK_TYPES,
     WEEKDAYS,
 )
+from sqlmodel import select
+
 from .db import session_scope
 from .hooks import task_changed
 from .models import Member, Project, RubricCategory, RubricCriterion, Stage, Task
@@ -106,40 +110,79 @@ async def reset_member_telegram(member_id: str) -> dict:
     return out
 
 
-# ---------------------------------------------------------------- proyecto y etapas
+# ---------------------------------------------------------------- proyectos y etapas
+def _project(s, project_id: str | None) -> Project:
+    p = s.get(Project, project_id or svc.default_project_id(s))
+    if p is None:
+        raise HTTPException(404, "Proyecto no encontrado.")
+    return p
+
+
+@router.get("/projects")
+async def list_projects(archived: bool = False) -> list[dict]:
+    with session_scope() as s:
+        tasks = svc.tasks_all(s)
+        return [svc.project_out(p, tasks) for p in svc.projects_all(s, include_archived=archived)]
+
+
+@router.post("/projects")
+async def create_project(payload: dict = Body(...)) -> dict:
+    with session_scope() as s:
+        try:
+            p = svc.create_project(s, payload)
+            if payload.get("basicRubric"):
+                s.flush()
+                svc.add_basic_rubric(s, p.id)
+        except (ValueError, TypeError) as exc:
+            raise _bad(exc) from exc
+        s.commit()
+        out = svc.project_out(p, [])
+    await notify("project")
+    vault.request_sync()  # crea su carpeta en Obsidian
+    return out
+
+
+@router.get("/projects/{project_id}")
+async def get_project_by_id(project_id: str) -> dict:
+    with session_scope() as s:
+        p = _project(s, project_id)
+        return {"project": svc.project_out(p, svc.tasks_all(s, p.id)), "stages": [svc.stage_out(st) for st in svc.stages_all(s, p.id)]}
+
+
+@router.patch("/projects/{project_id}")
+async def patch_project(project_id: str, payload: dict = Body(...)) -> dict:
+    with session_scope() as s:
+        p = _project(s, project_id)
+        try:
+            svc.update_project(s, p, payload)
+        except (ValueError, TypeError) as exc:
+            raise _bad(exc) from exc
+        s.commit()
+        out = svc.project_out(p)
+    await notify("project")
+    vault.request_sync()
+    return out
+
+
 @router.get("/project")
 async def get_project() -> dict:
+    """Proyecto principal (compatibilidad con versiones anteriores de la interfaz)."""
     with session_scope() as s:
-        p = s.get(Project, config.DEFAULT_PROJECT)
-        return {"project": svc.project_out(p), "stages": [svc.stage_out(st) for st in svc.stages_all(s)]}
+        project_id = svc.default_project_id(s)
+    return await get_project_by_id(project_id)
 
 
 @router.patch("/project")
 async def update_project(payload: dict = Body(...)) -> dict:
     with session_scope() as s:
-        p = s.get(Project, config.DEFAULT_PROJECT)
-        try:
-            for key, attr in (("summary", "summary"), ("phase", "phase"), ("name", "name")):
-                if key in payload:
-                    setattr(p, attr, str(payload[key] or "").strip())
-            if "pilotDate" in payload:
-                p.pilot_date = svc.parse_date(payload["pilotDate"])
-            if "backupDate" in payload:
-                p.backup_date = svc.parse_date(payload["backupDate"])
-            if "leadId" in payload:
-                p.lead_id = payload["leadId"] or None
-        except ValueError as exc:
-            raise _bad(exc) from exc
-        s.add(p)
-        s.commit()
-        out = svc.project_out(p)
-    await notify("project")
-    return out
+        project_id = svc.default_project_id(s)
+    return await patch_project(project_id, payload)
 
 
 @router.post("/stages")
 async def create_stage(payload: dict = Body(...)) -> dict:
     with session_scope() as s:
+        project = _project(s, payload.get("projectId"))
         try:
             start, end = svc.parse_date(payload.get("start")), svc.parse_date(payload.get("end"))
             if not payload.get("name") or not start or not end:
@@ -148,8 +191,8 @@ async def create_stage(payload: dict = Body(...)) -> dict:
                 raise ValueError("La fecha de fin no puede ser anterior al inicio.")
         except ValueError as exc:
             raise _bad(exc) from exc
-        order = len(svc.stages_all(s))
-        st = Stage(project_id=config.DEFAULT_PROJECT, order=order, name=str(payload["name"]).strip(), start=start, end=end,
+        order = len(svc.stages_all(s, project.id))
+        st = Stage(project_id=project.id, order=order, name=str(payload["name"]).strip(), start=start, end=end,
                    exit_criteria=str(payload.get("exitCriteria") or "").strip())
         s.add(st)
         s.commit()
@@ -186,9 +229,10 @@ async def update_stage(stage_id: int, payload: dict = Body(...)) -> dict:
 
 # ---------------------------------------------------------------- tareas
 @router.get("/tasks")
-async def list_tasks(archived: bool = False) -> list[dict]:
+async def list_tasks(archived: bool = False, project: str | None = None) -> list[dict]:
     with session_scope() as s:
-        return [svc.task_out(t) for t in svc.tasks_all(s, include_archived=archived)]
+        paths = vault.task_paths(s)
+        return [svc.task_out(t, paths.get(t.id)) for t in svc.tasks_all(s, project, include_archived=archived)]
 
 
 @router.post("/tasks")
@@ -253,9 +297,36 @@ async def followup(task_id: int, payload: dict = Body(default={})) -> dict:
 
 # ---------------------------------------------------------------- rúbrica
 @router.get("/rubric")
-async def rubric() -> dict:
+async def rubric(project: str | None = None) -> dict:
     with session_scope() as s:
-        return svc.rubric_overview(s)
+        return svc.rubric_overview(s, _project(s, project).id)
+
+
+@router.post("/rubric/categories")
+async def create_category(payload: dict = Body(...)) -> dict:
+    with session_scope() as s:
+        project = _project(s, payload.get("projectId"))
+        name = str(payload.get("name") or "").strip()
+        if not name:
+            raise HTTPException(400, "La categoría necesita un nombre.")
+        order = len(list(s.exec(select(RubricCategory).where(RubricCategory.project_id == project.id))))
+        s.add(RubricCategory(project_id=project.id, order=order, name=name))
+        s.commit()
+    await notify("rubric")
+    return {"ok": True}
+
+
+@router.post("/rubric/template")
+async def rubric_template(payload: dict = Body(...)) -> dict:
+    with session_scope() as s:
+        project = _project(s, payload.get("projectId"))
+        try:
+            svc.add_basic_rubric(s, project.id)
+        except ValueError as exc:
+            raise _bad(exc) from exc
+        s.commit()
+    await notify("rubric")
+    return {"ok": True}
 
 
 @router.patch("/rubric/criteria/{criterion_id}")
@@ -283,7 +354,7 @@ async def create_criterion(payload: dict = Body(...)) -> dict:
         title = str(payload.get("title") or "").strip()
         if not code or not title:
             raise HTTPException(400, "El criterio necesita código y texto.")
-        order = len([c for c in svc.criteria_all(s) if c.category_id == cat.id])
+        order = len([c for c in svc.criteria_all(s, cat.project_id) if c.category_id == cat.id])
         s.add(RubricCriterion(category_id=cat.id, code=code, title=title, verify=str(payload.get("verify") or "").strip(),
                               blocking=bool(payload.get("blocking")), order=order, state="pendiente"))
         s.commit()
@@ -294,8 +365,9 @@ async def create_criterion(payload: dict = Body(...)) -> dict:
 @router.post("/rubric/reviews")
 async def create_review(payload: dict = Body(...)) -> dict:
     with session_scope() as s:
+        project = _project(s, payload.get("projectId"))
         try:
-            review = svc.create_review(s, str(payload.get("reviewerId") or "dana"), payload.get("notes", ""))
+            review = svc.create_review(s, str(payload.get("reviewerId") or "dana"), payload.get("notes", ""), project.id)
         except ValueError as exc:
             raise _bad(exc) from exc
         s.commit()
@@ -306,11 +378,12 @@ async def create_review(payload: dict = Body(...)) -> dict:
 
 # ---------------------------------------------------------------- métricas y presencia
 @router.get("/metrics")
-async def metrics() -> dict:
+async def metrics(project: str | None = None) -> dict:
+    """Indicadores del proyecto elegido; la carga del equipo cuenta las tareas de todos los proyectos."""
     with session_scope() as s:
         team = svc.team_metrics(s)
         return {
-            "project": svc.project_metrics(s),
+            "project": svc.project_metrics(s, _project(s, project).id),
             "team": team,
             "suggestions": svc.suggestions(team, svc.tasks_all(s), svc.member_names(s)),
         }
@@ -342,6 +415,41 @@ async def telegram_settings(payload: dict = Body(...)) -> dict:
     return data
 
 
+TOKEN_RE = re.compile(r"\d{5,12}:[A-Za-z0-9_-]{30,60}")
+
+
+@router.post("/telegram/token")
+async def set_telegram_token(payload: dict = Body(...)) -> dict:
+    """Guarda el token de BotFather en .env, lo prueba con Telegram y reinicia el bot. El token nunca se devuelve."""
+    token = str(payload.get("token") or "").strip()
+    if not TOKEN_RE.fullmatch(token):
+        raise HTTPException(400, "Eso no parece un token de BotFather. Debe verse como 1234567890:AAH… (números, dos puntos y letras).")
+    from telegram import Bot
+    from telegram.error import TelegramError
+
+    try:
+        async with Bot(token) as probe:
+            await asyncio.wait_for(probe.get_me(), timeout=15)
+    except (TelegramError, asyncio.TimeoutError, OSError) as exc:
+        raise HTTPException(400, f"Telegram no aceptó el token ({exc}). Revisa que lo copiaste completo.") from exc
+    config.save_env_value("TELEGRAM_BOT_TOKEN", token)
+    await bot.restart_bot(token)
+    with session_scope() as s:
+        out = {"settings": svc.telegram_settings(s), "status": bot.status_out(s)}
+    await notify("settings")
+    return out
+
+
+@router.delete("/telegram/token")
+async def remove_telegram_token() -> dict:
+    config.save_env_value("TELEGRAM_BOT_TOKEN", "")
+    await bot.restart_bot("")
+    with session_scope() as s:
+        out = {"settings": svc.telegram_settings(s), "status": bot.status_out(s)}
+    await notify("settings")
+    return out
+
+
 @router.post("/telegram/unlink-group")
 async def unlink_group() -> dict:
     with session_scope() as s:
@@ -365,6 +473,35 @@ async def run_reminders() -> dict:
 async def checkins() -> list[dict]:
     with session_scope() as s:
         return [svc.checkin_out(c) for c in svc.recent_checkins(s)]
+
+
+# ---------------------------------------------------------------- obsidian
+@router.get("/vault")
+async def vault_status() -> dict:
+    with session_scope() as s:
+        return vault.status_out(s)
+
+
+@router.patch("/vault")
+async def vault_settings(payload: dict = Body(...)) -> dict:
+    with session_scope() as s:
+        try:
+            vault.save_settings(s, payload)
+        except ValueError as exc:
+            raise _bad(exc) from exc
+        s.commit()
+    vault.request_sync()
+    with session_scope() as s:
+        out = vault.status_out(s)
+    await notify("vault")
+    return out
+
+
+@router.post("/vault/sync")
+async def vault_sync_now() -> dict:
+    result = await vault.sync_and_notify()
+    with session_scope() as s:
+        return {"result": {k: v for k, v in result.items() if k != "changes"}, "status": vault.status_out(s)}
 
 
 @router.get("/export")

@@ -24,6 +24,7 @@ from .services import (
     add_comment,
     apply_patch,
     create_task,
+    default_project_id,
     fmt_date,
     local_now,
     local_today,
@@ -32,6 +33,7 @@ from .services import (
     parse_hhmm,
     presence,
     project_metrics,
+    projects_all,
     save_telegram_settings,
     task_by_key,
     task_sort_key,
@@ -355,9 +357,23 @@ async def cmd_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if await _member_or_warn(update) is None:
         return
     with session_scope() as s:
-        project = s.get(Project, config.DEFAULT_PROJECT)
-        text = weekly_group_text(project, project_metrics(s), team_metrics(s), tasks_all(s), {m.id: m.name for m in members_all(s)}, local_today())
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+        texts = project_summaries(s, local_today())
+    for text in texts or ["No hay proyectos con tareas abiertas."]:
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
+def project_summaries(s, today: date) -> list[str]:
+    """Un resumen por proyecto con tareas abiertas (el principal primero)."""
+    names = {m.id: m.name for m in members_all(s)}
+    team = team_metrics(s)
+    main = default_project_id(s)
+    texts = []
+    for project in sorted(projects_all(s), key=lambda p: (p.id != main, p.order)):
+        tasks = tasks_all(s, project.id)
+        if not any(t.status != "hecha" for t in tasks):
+            continue
+        texts.append(weekly_group_text(project, project_metrics(s, project.id), team, tasks, names, today))
+    return texts
 
 
 async def cmd_quiet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -551,13 +567,11 @@ async def run_weekly(force: bool = False) -> dict:
         cfg = telegram_settings(s)
         if not force and not cfg["weeklyEnabled"]:
             return {"ok": False, "reason": "El ritual semanal está apagado."}
-        project = s.get(Project, config.DEFAULT_PROJECT)
         tasks = tasks_all(s)
-        metrics = project_metrics(s)
-        team = team_metrics(s)
+        metrics = project_metrics(s, default_project_id(s))
         members = members_all(s)
         names = {m.id: m.name for m in members}
-        group_text = weekly_group_text(project, metrics, team, tasks, names, today) if cfg["groupWeeklySummary"] else None
+        group_texts = project_summaries(s, today) if cfg["groupWeeklySummary"] else []
         for m in members:
             if m.telegram_chat_id is None or _quiet(m):
                 continue
@@ -570,10 +584,13 @@ async def run_weekly(force: bool = False) -> dict:
         ceo = next((m for m in members if m.id == cfg["ceoId"]), None)
         ceo_chat = ceo.telegram_chat_id if ceo and not _quiet(ceo) else None
         ceo_message = ceo_text(metrics, tasks, names, today) if ceo_chat else None
-        if group_text and cfg["groupChatId"]:
-            add_checkin(s, kind="resumen", chat="grupo", text="Resumen semanal al grupo")
+        if group_texts and cfg["groupChatId"]:
+            add_checkin(s, kind="resumen", chat="grupo", text=f"Resumen semanal al grupo ({len(group_texts)} proyectos)")
         s.commit()
-    sent_group = await send(cfg["groupChatId"], group_text) if group_text and cfg["groupChatId"] else False
+    sent_group = False
+    if cfg["groupChatId"]:
+        for text in group_texts:
+            sent_group = await send(cfg["groupChatId"], text) or sent_group
     for chat_id, intro, cards in privates:
         await send(chat_id, intro)
         for text, task_id in cards:
@@ -736,3 +753,11 @@ async def stop_bot() -> None:
         await app.shutdown()
     finally:
         STATE.update(app=None, running=False)
+
+
+async def restart_bot(token: str) -> None:
+    """Cambia el token sin reiniciar HQ (se usa desde Seguimiento)."""
+    await stop_bot()
+    config.TELEGRAM_TOKEN = token
+    STATE.update(username=None, error=None)
+    await start_bot()

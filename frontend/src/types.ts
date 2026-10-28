@@ -49,6 +49,11 @@ export interface Project {
   phase: string
   keyPrefix: string
   theme: string
+  color: string
+  archived: boolean
+  vaultDir: string | null
+  order: number
+  counts?: { total: number; open: number; done: number; blocked: number }
 }
 
 export interface Stage {
@@ -65,6 +70,8 @@ export interface Task {
   id: number
   key: string
   projectId: string
+  phase: string
+  vaultPath: string | null
   title: string
   summary: string
   type: string
@@ -112,8 +119,25 @@ export type TaskPatch = Partial<
     | 'blockerWaitingOn'
     | 'archived'
     | 'sort'
+    | 'phase'
   >
 >
+
+export interface VaultStatus {
+  enabled: boolean
+  path: string
+  detected: string | null
+  root: string | null
+  vaultName: string | null
+  connected: boolean
+  lastSync: string | null
+  lastError: string | null
+  busy: boolean
+  stats: { projects?: number; notes?: number }
+  linkedTasks: number
+  linkedProjects: number
+  activity: { at: string; text: string }[]
+}
 
 export interface TaskBrief {
   id: number

@@ -59,7 +59,7 @@ export default function MePage() {
         <Avatar avatar={person.avatar} color={person.color} variant="full" size={118} mood={mood} cheer={pres?.state === 'celebrando'} title={person.name} />
         <div style={{ minWidth: 0 }}>
           <p className="eyebrow">
-            {person.role} · {stage ? stage.name : 'Bleepy'}
+            {person.role} · {stage ? stage.name : project?.project.name ?? ''}
           </p>
           <h1>
             {greeting()}, {person.name}

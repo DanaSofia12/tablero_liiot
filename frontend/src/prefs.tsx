@@ -6,6 +6,8 @@ export type Universe = 'liiot' | 'bleepy'
 interface Prefs {
   me: string | null
   setMe: (id: string | null) => void
+  project: string
+  setProject: (id: string) => void
   mode: Mode
   setMode: (m: Mode) => void
   resolvedMode: 'dark' | 'light'
@@ -55,6 +57,7 @@ function modeByHour(): 'dark' | 'light' {
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = usePersisted<string | null>('me', null)
+  const [project, setProject] = usePersisted<string>('project', 'bleepy')
   const [mode, setMode] = usePersisted<Mode>('mode', 'dark')
   const [uni, setUni] = usePersisted<Universe>('uni', 'liiot')
   const [pixel, setPixel] = usePersisted<boolean>('pixel', false)
@@ -78,9 +81,9 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   }, [resolvedMode, uni, calm])
 
   const value = useMemo<Prefs>(
-    () => ({ me, setMe, mode, setMode, resolvedMode, uni, setUni, pixel, setPixel, ignoreHours, setIgnoreHours, calm, setCalm }),
+    () => ({ me, setMe, project, setProject, mode, setMode, resolvedMode, uni, setUni, pixel, setPixel, ignoreHours, setIgnoreHours, calm, setCalm }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [me, mode, resolvedMode, uni, pixel, ignoreHours, calm],
+    [me, project, mode, resolvedMode, uni, pixel, ignoreHours, calm],
   )
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>
 }

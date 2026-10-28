@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Ban, CalendarCheck, Check, Flag, Rocket } from 'lucide-react'
-import { useProject, useTasks } from '../api'
+import { useProject, useProjectTasks } from '../api'
 import { Empty, MemberHead, useMemberMap, useTypeMap } from '../components/bits'
 import { addDays, daysBetween, fmtShort, parseDay, todayISO } from '../lib/format'
 import { useUI } from '../ui'
 
 export default function TimelinePage() {
   const data = useProject().data
-  const tasks = useTasks().data ?? []
+  const tasks = useProjectTasks().data ?? []
   const members = useMemberMap()
   const types = useTypeMap()
   const { openTask } = useUI()
@@ -86,7 +86,7 @@ export default function TimelinePage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <p className="eyebrow">Bleepy · {fmtShort(range.start)} – {fmtShort(range.end)}</p>
+          <p className="eyebrow">{data?.project.name ?? 'Proyecto'} · {fmtShort(range.start)} – {fmtShort(range.end)}</p>
           <h1>Cronograma</h1>
           <p>Etapas del piloto, cada tarea como barra y los hitos clave. Clic en una barra para abrir su ficha.</p>
         </div>

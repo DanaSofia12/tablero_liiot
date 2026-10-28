@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Download, Palette, UserRound } from 'lucide-react'
-import { api, qk, useRefresh } from '../api'
+import { BookOpen, Download, Palette, RefreshCw, UserRound } from 'lucide-react'
+import { api, qk, useRefresh, useVault } from '../api'
+import { fmtMoment } from '../lib/format'
+import type { VaultStatus } from '../types'
 import { Avatar } from '../components/Avatar'
 import { MemberHead, Panel, Toggle, useMemberMap } from '../components/bits'
 import { usePrefs, type Mode, type Universe } from '../prefs'
@@ -53,6 +55,7 @@ export default function SettingsPage() {
         </Panel>
 
         <div className="stack" style={{ gap: 16 }}>
+          <ObsidianPanel />
           <Panel title="Apariencia" icon={<Palette size={18} style={{ color: 'var(--acc-2)' }} />}>
             <div className="setting">
               <div className="txt">
@@ -129,7 +132,7 @@ export default function SettingsPage() {
 
           <Panel title="Datos">
             <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-              Copia completa en JSON: tareas, bitácora, rúbrica, revisiones y ajustes. Sirve de respaldo y para llevar el estado al vault.
+              Copia completa en JSON de todos los proyectos: tareas, bitácora, rúbricas, revisiones y ajustes. Sirve de respaldo.
             </p>
             <a className="btn" href="/api/export" download>
               <Download size={15} /> Descargar copia
@@ -138,6 +141,100 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Conexión con la bóveda de Obsidian: estado, carpeta, sincronizar ahora y últimos movimientos. */
+function ObsidianPanel() {
+  const vault = useVault().data
+  const refresh = useRefresh()
+  const { toast } = useUI()
+  const [path, setPath] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    if (vault) setPath(vault.path || vault.root || vault.detected || '')
+  }, [vault?.path, vault?.root, vault?.detected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!vault) return null
+  const patch = async (body: Partial<Pick<VaultStatus, 'enabled' | 'path'>>, ok: string) => {
+    try {
+      await api.patch('/api/vault', body)
+      refresh(qk.vault)
+      toast(ok)
+    } catch (e) {
+      toast((e as Error).message, 'bad')
+    }
+  }
+  const syncNow = async () => {
+    setBusy(true)
+    try {
+      const res = await api.post<{ result: Record<string, number | boolean | string>; status: VaultStatus }>('/api/vault/sync')
+      refresh(qk.vault, qk.tasks, qk.projects)
+      const r = res.result
+      toast(
+        r.ok
+          ? `Listo: ${r.imported ?? 0} nuevas desde Obsidian, ${r.exported ?? 0} creadas allá, ${(Number(r.updatedHQ) || 0) + (Number(r.updatedVault) || 0)} actualizadas`
+          : 'No se encontró la bóveda: revisa la carpeta',
+        r.ok ? 'ok' : 'bad',
+      )
+    } catch (e) {
+      toast((e as Error).message, 'bad')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Panel title="Obsidian" icon={<BookOpen size={18} style={{ color: 'var(--acc)' }} />}>
+      <div className="setting">
+        <div className="txt">
+          <b>Sincronizar tareas y proyectos con el vault</b>
+          <span>
+            {vault.connected
+              ? `Conectado a ${vault.root}. Cada proyecto de 10_Proyectos es un proyecto aquí y cada nota de 01_Gestion/Tareas, una tarea.`
+              : vault.enabled
+                ? 'No encuentro la bóveda. Escribe abajo la carpeta del vault (la que contiene 10_Proyectos).'
+                : 'Apagado: los cambios se quedan solo en HQ.'}
+          </span>
+        </div>
+        <Toggle checked={vault.enabled} onChange={(v) => patch({ enabled: v }, v ? 'Sincronización con Obsidian activada' : 'Sincronización con Obsidian pausada')} label="Sincronizar con Obsidian" />
+      </div>
+      <form
+        className="row"
+        style={{ gap: 8, margin: '10px 0' }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void patch({ path }, 'Carpeta del vault guardada')
+        }}
+      >
+        <input className="input" value={path} onChange={(e) => setPath(e.target.value)} placeholder="G:\Mi unidad\Liiot" aria-label="Carpeta del vault" />
+        <button type="submit" className="btn" disabled={!path.trim() || path === (vault.path || vault.root)}>
+          Guardar
+        </button>
+      </form>
+      <div className="row wrap" style={{ gap: 8 }}>
+        <button type="button" className="btn primary sm" onClick={syncNow} disabled={busy || !vault.connected}>
+          <RefreshCw size={14} className={busy || vault.busy ? 'spin' : undefined} /> Sincronizar ahora
+        </button>
+        <span className="muted" style={{ fontSize: 12.5 }}>
+          {vault.linkedTasks} tareas y {vault.linkedProjects} proyectos vinculados
+          {vault.lastSync ? ` · última revisión ${fmtMoment(vault.lastSync)}` : ''} · revisa sola cada 15 s
+        </span>
+      </div>
+      {vault.lastError && <p style={{ color: 'var(--bad)', fontSize: 12.5, marginTop: 8 }}>Último error: {vault.lastError}</p>}
+      {vault.activity.length > 0 && (
+        <ul className="vault-log">
+          {vault.activity.slice(0, 6).map((a, i) => (
+            <li key={`${a.at}-${i}`}>
+              <span className="muted">{fmtMoment(a.at)}</span> {a.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+        HQ solo cambia el encabezado (frontmatter) de las notas, nunca su texto, y no borra archivos: si borras una nota, la tarea queda archivada aquí.
+      </p>
+    </Panel>
   )
 }
 

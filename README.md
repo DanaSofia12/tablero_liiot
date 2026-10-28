@@ -23,8 +23,8 @@ Si Windows dice que *la ejecución de scripts está deshabilitada*, la política
 ## Bot de Telegram (gratis)
 
 1. En Telegram abre **@BotFather**, escribe `/newbot` y ponle un nombre (por ejemplo *Liiot HQ*) y un usuario que termine en `bot`.
-2. Copia el token que te da. Copia `.env.example` como `.env` y pégalo: `TELEGRAM_BOT_TOKEN=…`
-3. Cierra HQ y vuelve a abrir `iniciar.cmd`. En **Seguimiento** debe aparecer «Bot activo».
+2. Copia el token que te da (algo como `1234567890:AAH…`).
+3. En HQ ve a **Seguimiento**, pégalo en «Activar el bot» y toca **Conectar**. HQ lo prueba con Telegram, lo guarda en `.env` (solo en este PC) y enciende el bot sin reiniciar.
 4. En **Seguimiento → Personas** cada quien abre su enlace y toca *Iniciar* (Telegram no deja que un bot escriba primero).
 5. Agrega el bot al grupo del equipo y escribe `/vincular_grupo` ahí.
 
@@ -34,13 +34,26 @@ El bot funciona mientras HQ esté abierto en este PC: se mantiene conectado a Te
 - **Avisos:** recordatorios de vencimiento, alertas de bloqueo a Dana y a quien puede desbloquear, celebraciones en el grupo.
 - **Comandos:** `/hoy` `/semana` `/pendientes` `/estado` `/nueva` `/equipo` `/resumen` `/silencio` `/ayuda`. Las respuestas con botones (Hecho, En curso, Bloqueada, Nueva fecha…) actualizan HQ al instante.
 
+## Obsidian (sincronización en dos vías)
+
+HQ está conectado a la bóveda de Obsidian de Liiot (`G:\Mi unidad\Liiot`; se cambia en **Ajustes → Obsidian**):
+
+- Cada carpeta de `10_Proyectos` con su nota de proyecto es un **proyecto** en HQ, y cada nota de `10_Proyectos/<Proyecto>/01_Gestion/Tareas/` es una **tarea**.
+- Lo que crees o cambies en HQ (tarea o proyecto) aparece en Obsidian en un par de segundos, y lo que cambies en Obsidian llega a HQ en unos 15 s.
+- HQ solo toca el encabezado (frontmatter) de las notas que ya existen, nunca su texto, y no borra archivos. Si borras una nota, la tarea queda archivada en HQ.
+- Campos que se sincronizan: `status`, `responsable`, `categoria`, `prioridad` (critica, alta, media, baja), `vence`, `inicio`, `esfuerzo` (S, M, L), `fase`, `bloqueo`, `archivada` y `titulo`. Además, `hq` guarda la clave de HQ (por ejemplo `BLP-11`).
+- Estados válidos en `status`: `por_hacer`, `en_progreso`, `en_revision`, `bloqueada`, `hecho`.
+- Si una nota y su tarea cambian a la vez, gana el cambio más reciente y queda anotado en la bitácora.
+
 ## Qué hay adentro
+
+Arriba a la izquierda eliges el **proyecto** (o creas uno nuevo). Tareas, Lanzar y Cronograma muestran ese proyecto; Mi espacio y Equipo suman todos.
 
 | Sección | Para qué |
 |---|---|
 | Oficina | Oficina 3D: cada avatar refleja en vivo lo que hace (trabajando, bloqueado, en revisión, en reunión, fuera). Clic en el tablero, la pantalla, el calendario, la escultura o el portal. |
 | Mi espacio | Lo de cada persona: foco de hoy, quién espera por ella, semana y carga. Se puede ver a cualquiera. |
-| Tareas | Tablero (arrastrar entre columnas) y lista, con filtros. La ficha guarda la bitácora. |
+| Tareas | Tablero y lista con filtros. El estado se cambia con el selector de cada tarjeta (o arrastrándola); «Agregar tarea» al final de cada columna crea una en segundos. La ficha guarda la bitácora y abre la nota en Obsidian. |
 | Lanzar | Etapas, rúbrica del piloto (bloqueantes y demás) y el veredicto: lanzar, lanzar con riesgo o no lanzar. |
 | Cronograma | Etapas, tareas como barras e hitos (piloto 15-nov, respaldo 1-dic). |
 | Equipo | Carga de cada uno, entregas por día y sugerencias de reparto. |
@@ -49,7 +62,7 @@ El bot funciona mientras HQ esté abierto en este PC: se mantiene conectado a Te
 
 ## Datos
 
-- Todo vive en `backend/data/hq.db` (SQLite). La primera vez se llena con Bleepy: 23 tareas, 5 etapas y 30 criterios tomados del vault.
+- Todo vive en `backend/data/hq.db` (SQLite). La primera vez se llena con Bleepy (23 tareas, 5 etapas y 30 criterios) y luego trae del vault los demás proyectos y sus tareas.
 - **Copia de seguridad:** Ajustes → Datos → *Descargar copia* (JSON), o copia `hq.db` con HQ cerrado.
 - Para empezar de cero: cierra HQ y borra `backend/data/hq.db`; al abrir se vuelve a sembrar Bleepy.
 
@@ -71,6 +84,7 @@ backend/app/
   api.py        rutas /api
   services.py   reglas: tareas, carga, salud, rúbrica, presencia
   bot.py        bot de Telegram (comandos, botones, recordatorios, ritual)
+  vault.py      sincronización en dos vías con Obsidian
   models.py     tablas
   seed_data/    Bleepy inicial (desde el vault)
 frontend/src/

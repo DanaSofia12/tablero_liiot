@@ -6,6 +6,7 @@ from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = BACKEND_DIR.parent
+ENV_FILE = ROOT_DIR / ".env"
 
 
 def _load_env_file() -> None:
@@ -29,3 +30,20 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 TZ_NAME = os.environ.get("HQ_TZ", "America/Bogota")
 PUBLIC_URL = os.environ.get("HQ_PUBLIC_URL", "http://localhost:8000").rstrip("/")
 DEFAULT_PROJECT = "bleepy"
+
+# Bóveda de Obsidian que se sincroniza: vacío = buscarla sola en Google Drive; "off" = sin sincronización
+VAULT_PATH = os.environ.get("HQ_VAULT_PATH", "").strip()
+VAULT_CANDIDATES = [Path(r"G:\Mi unidad\Liiot"), Path(r"I:\Mi unidad\Liiot"), Path.home() / "Mi unidad" / "Liiot"]
+
+
+def save_env_value(key: str, value: str) -> None:
+    """Guarda (o quita, si value está vacío) una variable en .env sin tocar las demás líneas."""
+    lines = ENV_FILE.read_text(encoding="utf-8").splitlines() if ENV_FILE.is_file() else []
+    kept = [line for line in lines if not line.strip().startswith(f"{key}=")]
+    if value:
+        kept.append(f"{key}={value}")
+    ENV_FILE.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    if value:
+        os.environ[key] = value
+    else:
+        os.environ.pop(key, None)

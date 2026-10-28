@@ -7,12 +7,13 @@ type Message =
   | { type: 'celebrate'; taskId: number; memberId: string | null; taskKey: string | null }
 
 const SCOPES: Record<string, (readonly string[])[]> = {
-  tasks: [qk.tasks, qk.metrics, qk.presence, qk.rubric, qk.events, qk.checkins],
+  tasks: [qk.tasks, qk.metrics, qk.presence, qk.rubric, qk.events, qk.checkins, qk.projects],
   rubric: [qk.rubric, qk.metrics],
   members: [qk.members, qk.presence, qk.metrics, qk.telegram],
-  project: [qk.project, qk.metrics, qk.tasks],
+  project: [qk.projects, qk.project, qk.metrics, qk.tasks, qk.rubric, qk.presence],
   settings: [qk.telegram],
   checkins: [qk.checkins, qk.events],
+  vault: [qk.vault],
 }
 
 /** Conexión en vivo con el backend: cada cambio (web o Telegram) refresca lo que corresponde. */

@@ -1,8 +1,11 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Building2,
   ChartGantt,
+  Check,
+  ChevronDown,
+  FolderPlus,
   Moon,
   Orbit,
   Plus,
@@ -15,8 +18,9 @@ import {
   Sun,
   SunMoon,
   Users,
+  WifiOff,
 } from 'lucide-react'
-import { useProject } from '../api'
+import { OFFLINE_MESSAGE, useCurrentProject } from '../api'
 import { usePrefs } from '../prefs'
 import { useUI } from '../ui'
 import { MemberHead, useMemberMap } from './bits'
@@ -68,11 +72,100 @@ export function Background() {
   )
 }
 
+/** Selector del proyecto con el que se trabaja: Tareas, Lanzar y Cronograma muestran solo ese proyecto. */
+function ProjectSwitcher() {
+  const { project, projects, setProject } = useCurrentProject()
+  const { openNewProject } = useUI()
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('mousedown', close)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [open])
+  return (
+    <div className="project-switch" ref={box}>
+      <button type="button" className="project-chip" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title="Cambiar de proyecto">
+        <span className="pdot" style={{ background: project?.color ?? 'var(--acc)' }} />
+        <span>
+          <small>Proyecto</small>
+          <b>{project?.name ?? 'Cargando…'}</b>
+        </span>
+        <ChevronDown size={16} aria-hidden />
+      </button>
+      {open && (
+        <div className="project-menu panel" role="menu">
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={p.id === project?.id}
+              onClick={() => {
+                setProject(p.id)
+                setOpen(false)
+              }}
+            >
+              <span className="pdot" style={{ background: p.color }} />
+              <span className="grow">
+                <b>{p.name}</b>
+                <small>
+                  {p.keyPrefix} · {p.counts ? `${p.counts.open} abiertas de ${p.counts.total}` : 'sin tareas'}
+                </small>
+              </span>
+              {p.id === project?.id && <Check size={16} aria-hidden />}
+            </button>
+          ))}
+          <button
+            type="button"
+            role="menuitem"
+            className="new"
+            onClick={() => {
+              setOpen(false)
+              openNewProject()
+            }}
+          >
+            <FolderPlus size={17} aria-hidden /> Nuevo proyecto
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Aviso cuando se pierde la conexión con HQ por más de unos segundos (al abrir no parpadea). */
+function OfflineBanner({ live }: { live: boolean }) {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (live) {
+      setShow(false)
+      return
+    }
+    const t = window.setTimeout(() => setShow(true), 4000)
+    return () => window.clearTimeout(t)
+  }, [live])
+  if (!show) return null
+  return (
+    <div className="offline-banner" role="alert">
+      <WifiOff size={18} aria-hidden />
+      <span>
+        <b>HQ está desconectado.</b> {OFFLINE_MESSAGE.replace('No hay conexión con HQ. ', '')} Mientras tanto los cambios no se guardan.
+      </span>
+    </div>
+  )
+}
+
 export function Shell({ children, live }: { children: ReactNode; live: boolean }) {
   const { me, mode, setMode, uni, setUni } = usePrefs()
   const members = useMemberMap()
-  const project = useProject().data?.project
   const { openCreate } = useUI()
+  const { projectId } = useCurrentProject()
   const navigate = useNavigate()
   const location = useLocation()
   const [q, setQ] = useState('')
@@ -104,20 +197,15 @@ export function Shell({ children, live }: { children: ReactNode; live: boolean }
         </nav>
         <div className="main">
           <header className="topbar">
+            <ProjectSwitcher />
             <button
               type="button"
-              className="project-chip"
+              className="btn icon"
               onClick={() => setUni(uni === 'liiot' ? 'bleepy' : 'liiot')}
-              title="Cambiar de universo visual"
+              title={uni === 'bleepy' ? 'Volver al universo Liiot' : 'Cambiar al universo visual Bleepy'}
+              aria-label="Cambiar de universo visual"
             >
-              <span className="orb" />
-              <span>
-                <b>{uni === 'bleepy' ? 'Universo Bleepy' : 'Liiot HQ'}</b>
-                <small>
-                  {project?.name ?? 'Bleepy'} · {uni === 'bleepy' ? 'planeta creativo' : 'oficina principal'}
-                </small>
-              </span>
-              <Orbit size={16} aria-hidden />
+              <Orbit size={18} />
             </button>
             <span className="page-title">{TITLES[location.pathname] ?? ''}</span>
             <form
@@ -132,7 +220,7 @@ export function Shell({ children, live }: { children: ReactNode; live: boolean }
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tareas…" aria-label="Buscar tareas" />
               <kbd>ENTER</kbd>
             </form>
-            <button type="button" className="btn primary" onClick={() => openCreate({ ownerId: me ?? undefined })}>
+            <button type="button" className="btn primary" onClick={() => openCreate({ ownerId: me ?? undefined, projectId })}>
               <Plus size={17} aria-hidden /> Nueva tarea
             </button>
             <button
@@ -148,6 +236,7 @@ export function Shell({ children, live }: { children: ReactNode; live: boolean }
               <MemberHead member={me ? members[me] : undefined} size={38} />
             </button>
           </header>
+          <OfflineBanner live={live} />
           {children}
         </div>
       </div>

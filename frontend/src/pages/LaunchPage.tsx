@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ChevronRight, ClipboardCheck, Lock, Rocket } from 'lucide-react'
-import { api, useProject, useRefresh, useRubric, useTasks, qk } from '../api'
+import { ChevronRight, ClipboardCheck, ListChecks, Lock, Plus, Rocket } from 'lucide-react'
+import { api, useProject, useProjectTasks, useRefresh, useRubric, qk } from '../api'
 import { Empty, MemberHead, Meter, useMemberMap } from '../components/bits'
 import { daysBetween, fmtDay, fmtMoment, fmtShort, todayISO } from '../lib/format'
 import { usePrefs } from '../prefs'
@@ -22,12 +22,12 @@ const STATES: { v: CriterionState; label: string }[] = [
 export default function LaunchPage() {
   const projectData = useProject().data
   const rubric = useRubric().data
-  const tasks = useTasks().data ?? []
+  const tasks = useProjectTasks().data ?? []
   const members = useMemberMap()
   const refresh = useRefresh()
   const { toast, openTask } = useUI()
   const { me } = usePrefs()
-  const [editing, setEditing] = useState<Stage | null>(null)
+  const [editing, setEditing] = useState<Stage | 'nueva' | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const today = todayISO()
 
@@ -37,6 +37,17 @@ export default function LaunchPage() {
   const fuel = v.blockingTotal ? v.blockingOk / v.blockingTotal : 0
   const days = project.pilotDate ? daysBetween(today, project.pilotDate) : null
   const taskByKey = Object.fromEntries(tasks.map((t) => [t.key, t]))
+  const milestone = project.id === 'bleepy' ? 'piloto' : 'entrega'
+  const criteriaCount = rubric.categories.reduce((n, cat) => n + cat.criteria.length, 0)
+  const createBasicRubric = async () => {
+    try {
+      await api.post('/api/rubric/template', { projectId: project.id })
+      refresh(qk.rubric, qk.metrics)
+      toast('Rúbrica básica creada: ajústala a tu proyecto')
+    } catch (e) {
+      toast((e as Error).message, 'bad')
+    }
+  }
 
   const setCriterion = async (c: Criterion, patch: Partial<Pick<Criterion, 'state' | 'ownerId'>>) => {
     try {
@@ -53,7 +64,8 @@ export default function LaunchPage() {
         <span className="orb" style={{ width: 64, height: 64 }} />
         <div style={{ minWidth: 0 }}>
           <p className="eyebrow">
-            {project.code} · {project.phase}
+            {project.code}
+            {project.phase ? ` · ${project.phase}` : ''}
           </p>
           <h1 style={{ fontSize: 'clamp(26px, 3vw, 38px)' }}>{project.name}</h1>
           <p className="muted" style={{ marginTop: 6, maxWidth: '70ch' }}>
@@ -63,19 +75,26 @@ export default function LaunchPage() {
             <span className="chip">
               <MemberHead member={members[project.leadId ?? '']} size={18} /> Líder: {members[project.leadId ?? '']?.name ?? '—'}
             </span>
-            <span className="chip">Piloto {fmtDay(project.pilotDate)}</span>
-            <span className="chip">Respaldo {fmtDay(project.backupDate)}</span>
+            <span className="chip">
+              {milestone === 'piloto' ? 'Piloto' : 'Entrega'} {project.pilotDate ? fmtDay(project.pilotDate) : 'sin fecha'}
+            </span>
+            {project.backupDate && <span className="chip">Respaldo {fmtDay(project.backupDate)}</span>}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div className="num-outline" style={{ fontSize: 64, lineHeight: 0.9 }}>
             {days ?? '—'}
           </div>
-          <span className="pix muted">días al piloto</span>
+          <span className="pix muted">días para la {milestone}</span>
         </div>
       </section>
 
       <div className="stages">
+        {stages.length === 0 && (
+          <p className="muted" style={{ fontSize: 13, alignSelf: 'center' }}>
+            Este proyecto aún no tiene etapas. Son opcionales: sirven para agrupar las tareas por semanas en el cronograma.
+          </p>
+        )}
         {stages.map((st) => {
           const stTasks = tasks.filter((t) => t.stageId === st.id)
           const done = stTasks.filter((t) => t.status === 'hecha').length
@@ -96,6 +115,9 @@ export default function LaunchPage() {
             </button>
           )
         })}
+        <button type="button" className="stage-card add" onClick={() => setEditing('nueva')}>
+          <Plus size={18} /> <b>Agregar etapa</b>
+        </button>
       </div>
 
       <div className="launch-grid">
@@ -161,6 +183,18 @@ export default function LaunchPage() {
         </section>
 
         <div className="rubric">
+          {rubric.categories.length === 0 && (
+            <section className="panel empty-project">
+              <ListChecks size={28} style={{ color: 'var(--acc)' }} />
+              <h2>{project.name} todavía no tiene rúbrica de lanzamiento</h2>
+              <p className="muted">
+                La rúbrica es la lista de lo que debe cumplirse antes de lanzar. Los criterios con candado son bloqueantes: si uno no cumple, no se lanza.
+              </p>
+              <button type="button" className="btn primary" onClick={createBasicRubric}>
+                <ListChecks size={16} /> Crear rúbrica básica (6 criterios)
+              </button>
+            </section>
+          )}
           {rubric.categories.map((cat, i) => {
             const blocking = cat.criteria.filter((c) => c.blocking)
             const ok = cat.criteria.filter((c) => c.state === 'cumple').length
@@ -221,17 +255,21 @@ export default function LaunchPage() {
         </div>
       </div>
 
-      {editing && <StageDialog stage={editing} onClose={() => setEditing(null)} />}
+      {editing && <StageDialog stage={editing === 'nueva' ? null : editing} projectId={project.id} onClose={() => setEditing(null)} />}
       {reviewOpen && (
         <ReviewDialog
           onClose={() => setReviewOpen(false)}
           onSave={async (notes) => {
-            await api.post('/api/rubric/reviews', { reviewerId: me, notes })
-            refresh(qk.rubric)
-            toast('Revisión guardada con la foto de la rúbrica')
-            setReviewOpen(false)
+            try {
+              await api.post('/api/rubric/reviews', { reviewerId: me, notes, projectId: project.id })
+              refresh(qk.rubric)
+              toast('Revisión guardada con la foto de la rúbrica')
+              setReviewOpen(false)
+            } catch (e) {
+              toast((e as Error).message, 'bad')
+            }
           }}
-          summary={`${DECISION[v.decision]} · ${v.blockingOk}/${v.blockingTotal} bloqueantes · ${v.othersPct}% de los demás`}
+          summary={`${criteriaCount} criterios · ${DECISION[v.decision]} · ${v.blockingOk}/${v.blockingTotal} bloqueantes · ${v.othersPct}% de los demás`}
         />
       )}
     </div>
@@ -270,10 +308,10 @@ function RocketGauge({ fuel, ready }: { fuel: number; ready: boolean }) {
   )
 }
 
-function StageDialog({ stage, onClose }: { stage: Stage; onClose: () => void }) {
+function StageDialog({ stage, projectId, onClose }: { stage: Stage | null; projectId: string; onClose: () => void }) {
   const refresh = useRefresh()
   const { toast } = useUI()
-  const [data, setData] = useState({ name: stage.name, start: stage.start, end: stage.end, exitCriteria: stage.exitCriteria })
+  const [data, setData] = useState({ name: stage?.name ?? '', start: stage?.start ?? todayISO(), end: stage?.end ?? todayISO(), exitCriteria: stage?.exitCriteria ?? '' })
   return (
     <>
       <div className="scrim" onClick={onClose} />
@@ -282,16 +320,17 @@ function StageDialog({ stage, onClose }: { stage: Stage; onClose: () => void }) 
         onSubmit={async (e) => {
           e.preventDefault()
           try {
-            await api.patch(`/api/stages/${stage.id}`, data)
+            if (stage) await api.patch(`/api/stages/${stage.id}`, data)
+            else await api.post('/api/stages', { ...data, projectId })
             refresh(qk.project, qk.metrics)
-            toast('Etapa actualizada')
+            toast(stage ? 'Etapa actualizada' : 'Etapa creada')
             onClose()
           } catch (err) {
             toast((err as Error).message, 'bad')
           }
         }}
       >
-        <h2>Editar etapa</h2>
+        <h2>{stage ? 'Editar etapa' : 'Nueva etapa'}</h2>
         <div className="stack">
           <label className="field">
             <span>Nombre</span>
@@ -339,7 +378,7 @@ function ReviewDialog({ onClose, onSave, summary }: { onClose: () => void; onSav
       >
         <h2>Registrar revisión</h2>
         <p className="muted" style={{ marginBottom: 12 }}>
-          Se guarda una foto del estado de los 30 criterios: {summary}.
+          Se guarda una foto del estado de la rúbrica: {summary}.
         </p>
         <label className="field">
           <span>Notas y decisión del equipo</span>

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Archive, Ban, Bot, Globe, MessageCircle, Send, Sparkles, X } from 'lucide-react'
-import { useCatalog, useProject, useRubric, useTaskActions, useTaskEvents, useTasks } from '../api'
+import { Archive, Ban, Bot, BookOpen, Globe, MessageCircle, Send, Sparkles, X } from 'lucide-react'
+import { obsidianUrl, useCatalog, useProject, useProjects, useRubric, useTaskActions, useTaskEvents, useTasks, useVault } from '../api'
 import { fmtMoment, fmtShort } from '../lib/format'
 import { usePrefs } from '../prefs'
 import { useUI } from '../ui'
@@ -31,8 +31,11 @@ export function TaskDrawer() {
 function DrawerContent({ task, onClose, toast }: { task: Task; onClose: () => void; toast: (t: string, tone?: 'ok' | 'bad' | 'info' | 'party') => void }) {
   const { update, comment, followup } = useTaskActions()
   const catalog = useCatalog().data
-  const stages = useProject().data?.stages ?? []
-  const codes = (useRubric().data?.categories ?? []).flatMap((c) => c.criteria.map((x) => x.code))
+  const stages = useProject(task.projectId).data?.stages ?? []
+  const project = useProjects().data?.find((p) => p.id === task.projectId)
+  const vault = useVault().data
+  const noteUrl = obsidianUrl(vault?.vaultName, task.vaultPath)
+  const codes = (useRubric(task.projectId).data?.categories ?? []).flatMap((c) => c.criteria.map((x) => x.code))
   const members = useMemberMap()
   const events = useTaskEvents(task.id).data ?? []
   const { me } = usePrefs()
@@ -51,14 +54,8 @@ function DrawerContent({ task, onClose, toast }: { task: Task; onClose: () => vo
   const [blockWho, setBlockWho] = useState<string>('')
   const [asking, setAsking] = useState(false)
 
-  const save = (patch: TaskPatch, ok?: string) =>
-    update.mutate(
-      { id: task.id, patch },
-      {
-        onSuccess: () => ok && toast(ok),
-        onError: (e) => toast((e as Error).message, 'bad'),
-      },
-    )
+  // Si falla, useTaskActions ya avisa y deja la tarea como estaba
+  const save = (patch: TaskPatch, ok?: string) => update.mutate({ id: task.id, patch }, { onSuccess: () => ok && toast(ok) })
 
   const setStatus = (s: TaskStatus) => {
     if (s === 'bloqueada') {
@@ -72,8 +69,17 @@ function DrawerContent({ task, onClose, toast }: { task: Task; onClose: () => vo
     <>
       <div className="drawer-head">
         <span className="key">{task.key}</span>
-        {task.legacyId && <span className="chip" title="ID en el vault">{task.legacyId}</span>}
+        {project && (
+          <span className="chip" title="Proyecto">
+            <span className="pdot" style={{ background: project.color }} /> {project.name}
+          </span>
+        )}
         <span className="grow" />
+        {noteUrl && (
+          <a className="btn sm" href={noteUrl} title={`Nota ${task.legacyId ?? ''} en Obsidian`}>
+            <BookOpen size={14} /> Abrir en Obsidian
+          </a>
+        )}
         <button type="button" className="btn sm" onClick={() => followup.mutate(task.id, { onSuccess: (r) => toast(r.message, r.sent ? 'ok' : 'info') })}>
           <Send size={14} /> Pedir seguimiento
         </button>
@@ -92,6 +98,7 @@ function DrawerContent({ task, onClose, toast }: { task: Task; onClose: () => vo
           onBlur={() => title.trim() && title !== task.title && save({ title: title.trim() }, 'Título guardado')}
           aria-label="Título"
         />
+        <span className="field-label">Estado · toca uno para cambiarlo</span>
         <div className="status-bar" role="group" aria-label="Estado">
           {STATUS_ORDER.map((s) => (
             <button
@@ -221,16 +228,28 @@ function DrawerContent({ task, onClose, toast }: { task: Task; onClose: () => vo
             <span>Vence {task.reschedules > 0 && `· movida ${task.reschedules}×`}</span>
             <input className="input" type="date" value={task.dueDate ?? ''} onChange={(e) => save({ dueDate: e.target.value || null }, 'Fecha actualizada')} />
           </label>
+          {stages.length > 0 && (
+            <label className="field full">
+              <span>Etapa</span>
+              <select className="select" value={task.stageId ?? ''} onChange={(e) => save({ stageId: e.target.value ? Number(e.target.value) : null })}>
+                <option value="">Sin etapa</option>
+                {stages.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} ({fmtShort(st.start)} – {fmtShort(st.end)})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="field full">
-            <span>Etapa</span>
-            <select className="select" value={task.stageId ?? ''} onChange={(e) => save({ stageId: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">Sin etapa</option>
-              {stages.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.name} ({fmtShort(st.start)} – {fmtShort(st.end)})
-                </option>
-              ))}
-            </select>
+            <span>Fase (la misma de Obsidian)</span>
+            <input
+              className="input"
+              key={task.phase}
+              defaultValue={task.phase}
+              placeholder="p. ej. fase_1"
+              onBlur={(e) => e.target.value.trim() !== task.phase && save({ phase: e.target.value.trim() }, 'Fase guardada')}
+            />
           </label>
           <div className="field full">
             <span>Colaboradores</span>

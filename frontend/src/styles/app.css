@@ -306,6 +306,129 @@ textarea {
   width: 32px;
   height: 32px;
 }
+.project-switch {
+  position: relative;
+}
+.project-switch .project-chip {
+  padding: 7px 12px 7px 12px;
+  min-width: 190px;
+  text-align: left;
+  color: var(--ink);
+}
+.project-switch .project-chip .pdot {
+  width: 12px;
+  height: 12px;
+}
+.project-switch .project-chip > svg {
+  margin-left: auto;
+  color: var(--ink-3);
+}
+.project-switch .project-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  display: grid;
+  gap: 2px;
+  min-width: 280px;
+  padding: 6px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow), 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+}
+.project-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.project-menu button:hover,
+.project-menu button[aria-checked='true'] {
+  background: var(--field);
+}
+.project-menu b {
+  display: block;
+  font: 600 13.5px var(--font-display);
+}
+.project-menu small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.project-menu .new {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 12px 12px;
+  color: var(--acc);
+  font-weight: 700;
+}
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 24px 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--bad) 16%, var(--panel-solid));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--bad) 55%, transparent);
+  font-size: 13px;
+}
+.offline-banner svg {
+  color: var(--bad);
+  flex-shrink: 0;
+}
+.swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.swatches button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+.swatches button[aria-checked='true'] {
+  box-shadow: 0 0 0 3px var(--panel-solid), 0 0 0 5px var(--ink);
+}
+.field-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-bottom: -4px;
+}
+.vault-log {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--field);
+  display: grid;
+  gap: 5px;
+  font-size: 12.5px;
+}
+.btn[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--acc) 24%, var(--panel-2));
+  box-shadow: inset 0 0 0 1.5px var(--acc);
+  color: var(--ink);
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .project-chip b {
   display: block;
   font: 600 13.5px var(--font-display);
@@ -1474,11 +1597,146 @@ textarea {
 }
 .board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(230px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(5, minmax(186px, 1fr));
+  gap: 12px;
   overflow-x: auto;
   padding-bottom: 8px;
   align-items: start;
+}
+/* selector de estado en cada tarjeta: la forma más directa de mover una tarea */
+.status-pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px 0 9px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--sc) 14%, var(--field));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--sc) 45%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+}
+.status-pick:hover {
+  box-shadow: inset 0 0 0 1.5px var(--sc);
+}
+.status-pick > svg:first-child {
+  width: 15px;
+  height: 15px;
+  color: var(--sc);
+  flex-shrink: 0;
+}
+.status-pick > svg:last-child {
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.status-pick select {
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.status-pick.compact {
+  height: 28px;
+  min-width: 132px;
+}
+.status-pick .label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.quick-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-2);
+  background: transparent;
+  color: var(--ink-3);
+  font: 600 12.5px var(--font-ui);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.quick-add:hover {
+  color: var(--ink);
+  border-color: var(--acc);
+  background: color-mix(in oklab, var(--acc) 8%, transparent);
+}
+.quick-add-form {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--panel-2);
+  box-shadow: inset 0 0 0 1px var(--acc);
+}
+.howto {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.howto ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: h;
+  flex: 1;
+}
+.howto li {
+  counter-increment: h;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.howto li::before {
+  content: counter(h);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #fff;
+  font: 700 12px var(--font-pixel);
+}
+.howto li b {
+  color: var(--ink);
+}
+.empty-project {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.empty-project h2 {
+  font-size: 18px;
+}
+.empty-project p {
+  max-width: 56ch;
+}
+.pdot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px color-mix(in oklab, currentColor 12%, transparent), 0 0 10px -2px currentColor;
 }
 .column {
   display: grid;
@@ -1653,6 +1911,19 @@ textarea {
 }
 .stage-card.past {
   opacity: 0.78;
+}
+.stage-card.add {
+  place-content: center;
+  justify-items: center;
+  grid-auto-flow: column;
+  gap: 8px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--ink-3);
+}
+.stage-card.add:hover {
+  color: var(--ink);
+  border-color: var(--acc);
 }
 .launch-grid {
   display: grid;

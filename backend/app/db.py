@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterator
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from . import config
@@ -28,6 +28,30 @@ def init_db() -> None:
     from . import models  # noqa: F401  (registra las tablas)
 
     SQLModel.metadata.create_all(engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """create_all no agrega columnas nuevas a tablas que ya existen: aquí se añaden con su valor por defecto."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in SQLModel.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing:
+                    continue
+                default = col.default.arg if col.default is not None and not callable(col.default.arg) else None
+                clause = ""
+                if isinstance(default, bool):
+                    clause = f" DEFAULT {int(default)}"
+                elif isinstance(default, (int, float)):
+                    clause = f" DEFAULT {default}"
+                elif default is not None:
+                    clause = " DEFAULT '" + str(default).replace("'", "''") + "'"
+                coltype = col.type.compile(dialect=engine.dialect)
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {coltype}{clause}'))
 
 
 @contextmanager

@@ -15,6 +15,9 @@ interface UI {
   createDraft: TaskCreate | null
   openCreate: (defaults?: Partial<TaskCreate>) => void
   closeCreate: () => void
+  newProject: boolean
+  openNewProject: () => void
+  closeNewProject: () => void
   toasts: Toast[]
   toast: (text: string, tone?: ToastTone) => void
   dismiss: (id: number) => void
@@ -26,6 +29,7 @@ let toastSeq = 0
 export function UIProvider({ children }: { children: ReactNode }) {
   const [openTaskId, setOpenTaskId] = useState<number | null>(null)
   const [createDraft, setCreateDraft] = useState<TaskCreate | null>(null)
+  const [newProject, setNewProject] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
 
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((t) => t.id !== id)), [])
@@ -46,11 +50,14 @@ export function UIProvider({ children }: { children: ReactNode }) {
       createDraft,
       openCreate: (defaults) => setCreateDraft({ title: '', ...defaults }),
       closeCreate: () => setCreateDraft(null),
+      newProject,
+      openNewProject: () => setNewProject(true),
+      closeNewProject: () => setNewProject(false),
       toasts,
       toast,
       dismiss,
     }),
-    [openTaskId, createDraft, toasts, toast, dismiss],
+    [openTaskId, createDraft, newProject, toasts, toast, dismiss],
   )
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>
 }

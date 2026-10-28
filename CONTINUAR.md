@@ -1,6 +1,6 @@
 # Continuar Liiot HQ
 
-Documento para retomar el trabajo en otra sesión sin perder nada de lo planteado. Estado al **26 de octubre de 2026**.
+Documento para retomar el trabajo en otra sesión sin perder nada de lo planteado. Estado al **27 de octubre de 2026**.
 
 - Plano original (arquitectura de información, bocetos, stack, fases y preguntas): https://claude.ai/artifact/AU38zGzv8MZrwCziqZyGSi
 - Código: `C:\Users\dana\dev\liiot-hq` (a propósito fuera de Google Drive: `node_modules` no debe sincronizarse).
@@ -35,22 +35,36 @@ Directivas de la segunda ronda (mandan sobre el plano):
 - **Sin despliegue: todo local.** Más adelante quizá una intranet.
 - **No gastar dinero.**
 - Construir de una vez la mayor parte; lo que falte, dejarlo listo para otra sesión (este documento).
-- **No es un proyecto del vault**: es una herramienta de Dana. No registrarlo en `10_Proyectos`, no escribir ADR ni tocar el vault.
+- **No es un proyecto del vault**: es una herramienta de Dana. No registrarlo en `10_Proyectos` ni escribir ADR.
 - Dana compartió fotos de los tres para los avatares.
+
+Tercera ronda (27-oct, manda sobre las anteriores):
+
+- Cambiar el estado de las tareas tiene que funcionar siempre (antes fallaba en silencio cuando HQ estaba apagado).
+- **Conectado a Obsidian en las dos direcciones**: lo que se crea o cambia en HQ aparece en el vault y viceversa.
+- **Varios proyectos**: poder crear proyectos distintos a Bleepy y ponerles tareas. Con la sincronización, SST y Landing Page del vault también aparecen.
+- Mejor experiencia: que se entienda cómo crear tareas y cambiar su estado.
+- Explicar paso a paso cómo activar Telegram.
+- Subir el código a GitHub (Dana creó `DanaSofia12/tablero_liiot`).
 
 ## 2. Reglas que no se negocian
 
-1. Local y gratis: nada de Railway, dominios, IA de pago ni servicios con costo.
-2. Solo Bleepy (`PRJ-LCOM`); en el vault se dice **piloto**, no «demo» ni «beta». Piloto 15-nov, respaldo 1-dic.
+1. Local y gratis: nada de Railway, dominios, IA de pago ni servicios con costo (las opciones para salir de lo local están en §5).
+2. Proyectos: los de `10_Proyectos` del vault más los que se creen en HQ. Para Bleepy se dice **piloto**, no «demo» ni «beta» (piloto 15-nov, respaldo 1-dic).
 3. Solo los tres fundadores.
-4. El token de Telegram vive solo en `.env` (ignorado por git).
-5. Commit y push solo cuando Dana lo pida. El remoto `origin` es un repositorio **privado** en GitHub.
-6. No modificar el vault (`G:\Mi unidad\Liiot`).
+4. El token de Telegram vive solo en `.env` (ignorado por git) y nunca sale por la API.
+5. Commit y push solo cuando Dana lo pida. El código va a GitHub solo si el repositorio es **privado**: tiene nombres del equipo y datos internos de Bleepy.
+6. El vault solo lo toca la sincronización de HQ, y así: frontmatter de las notas de `10_Proyectos/*/01_Gestion/Tareas` y de las notas de proyecto, más las notas y carpetas nuevas que se creen desde HQ. Nunca el cuerpo de una nota existente y nunca borrar archivos.
 7. No iniciar sesión en Pinterest ni en otros sitios.
 
 ## 3. Qué ya funciona
 
-Verificado el 25-oct: pruebas del backend (3/3), compilación con TypeScript estricto y revisión en el navegador de todas las páginas, sin errores en consola.
+Verificado el 27-oct: pruebas del backend (5/5, una de ellas sincroniza con una bóveda temporal), compilación con TypeScript estricto y revisión en el navegador con copias de la base y del vault.
+
+- **Sincronización con Obsidian** (`backend/app/vault.py`): revisa el vault cada 15 s y, tras cada cambio en HQ, en 1 a 2 s. Hace una fusión en tres vías por campo, guardando en `VaultLink.base_json` lo último sincronizado de cada lado; gana el lado que cambió y, si cambiaron ambos, el más reciente. Los campos están en el README. Reconoce a las personas por cómo aparecen en el vault («Jean Pierre Ortiz Murcia», «David Ocaño», «Dana»); «El grupo» o personas externas quedan a cargo del líder del proyecto en HQ, sin reescribir la nota. Si falta una nota dos revisiones seguidas, archiva la tarea, salvo que falten muchas a la vez: ahí no archiva nada, por si Google Drive está sincronizando. Ensayo sobre copias: la primera pasada importó SST (49) y Landing Page, creó 9 notas de Bleepy y completó campos en 14; la segunda pasada no cambió nada.
+- **Varios proyectos**: selector arriba a la izquierda y «Nuevo proyecto» (prefijo de claves, líder, fecha, color y rúbrica básica opcional). Un proyecto nuevo crea su carpeta en `10_Proyectos` con la plantilla del vault. Tareas, Lanzar y Cronograma son del proyecto elegido; Mi espacio, Equipo y el bot suman todos los proyectos. El resumen semanal del grupo manda un mensaje por proyecto con tareas abiertas.
+- **Tareas más claras**: selector de estado en cada tarjeta y en la lista, «Agregar tarea» al final de cada columna, guía de 4 pasos (se puede ocultar), estado vacío para proyectos nuevos, formulario con «¿Qué hay que hacer? / ¿Quién? / ¿Para cuándo?» y atajos de fecha, tablero que cabe en pantallas medianas, aviso rojo si HQ se desconecta y mensaje claro si un cambio no se guarda.
+- **Telegram desde la app**: en Seguimiento se pega el token de BotFather y HQ lo valida, lo guarda en `.env` y reinicia el bot sin cerrar HQ. También se puede desconectar.
 
 - **Backend** (FastAPI + SQLModel + SQLite en modo WAL): API completa en `/api`, WebSocket `/ws` para tiempo real y la interfaz compilada servida por el mismo proceso. `index.html` va con `no-cache` y `assets/` con caché larga.
 - **Datos sembrados desde el vault**: 23 tareas (14 del vault `TSK-20261013-01..14` con sus estados y dueños reales, más 9 del cronograma), 5 etapas (15-19 oct, 20-26 oct, 27 oct-2 nov, 3-9 nov, piloto 10-15 nov), rúbrica de 8 categorías y 30 criterios (18 bloqueantes). La tarea de logo que tenía Saray quedó a cargo de Jean Pierre.
@@ -87,7 +101,9 @@ Verificado el 25-oct: pruebas del backend (3/3), compilación con TypeScript est
 
 ## 5. Pendiente, en orden sugerido
 
-1. **Probar el bot de verdad**: Dana crea el bot con BotFather, pega el token en `.env`, vincula a los tres y al grupo, y prueba los botones (hecha, bloqueada con motivo, nueva fecha, comentario) y el ritual con «Enviar ahora».
+1. **Probar el bot de verdad**: Dana crea el bot con BotFather, pega el token en Seguimiento, vincula a los tres y al grupo, y prueba los botones (hecha, bloqueada con motivo, nueva fecha, comentario) y el ritual con «Enviar ahora».
+1. **GitHub**: el repositorio `DanaSofia12/tablero_liiot` estaba **público** el 27-oct; no se subió nada. Subir solo cuando sea privado (o si Dana confirma que lo quiere público).
+1. **Obsidian**: revisar con el equipo las 9 notas que HQ creó en Bleepy y los campos que agregó; documentar en el vault (plantilla `Entity_Tarea`) los estados nuevos `en_revision` y `bloqueada` si el equipo los adopta (eso toca el vault: pedir permiso antes).
 2. **Confirmar los avatares** con cada persona y ajustar rasgos en Ajustes (o en `backend/app/seed_data/bleepy.json` para el valor inicial).
 3. **Seguimiento que falta del plano**: aviso a Dana si una tarea vencida no tiene respuesta en 4 horas hábiles; check-in de tareas sin movimiento (3 días en progreso, o P0 cada 2 días hábiles); resumen diario opcional a Dana (por ejemplo 7:30).
 4. **Cronograma**: arrastrar barras para cambiar fechas y dependencias entre tareas.
@@ -118,7 +134,8 @@ backend/app/
   api.py         rutas /api
   services.py    reglas: tareas, carga, salud, rúbrica, presencia, serializadores
   bot.py         Telegram: comandos, botones, textos, recordatorios, ritual
-  hooks.py       tras cada cambio: avisa por WebSocket y al bot
+  vault.py       sincronización en dos vías con Obsidian (ciclo cada 15 s + al cambiar algo en HQ)
+  hooks.py       tras cada cambio: avisa por WebSocket, al bot y pide sincronizar con Obsidian
   models.py      tablas · catalog.py  tipos, estados, prioridades, ajustes por defecto
   seed.py + seed_data/bleepy.json   datos iniciales
 backend/tests/test_api.py           flujo completo, bot sin conexión, textos del bot
@@ -140,6 +157,9 @@ frontend/src/
 - `Get-ChildItem <archivo> -Recurse` busca ese nombre en todas las subcarpetas, `node_modules` incluido: no usarlo con archivos sueltos.
 - `Start-Job` tarda unos 6 s en arrancar en este PC; el script abre el navegador desde un runspace (`[powershell]::Create()`).
 - Un HQ lanzado desde una sesión de Claude Code muere cuando esa sesión se cierra; para que quede abierto, lanzar `iniciar.cmd` en su propia ventana.
+- Columnas nuevas en tablas existentes: `db._add_missing_columns()` las agrega al arrancar (SQLite no lo hace con `create_all`).
+- Probar la sincronización siempre sobre copias: `HQ_VAULT_PATH=<copia>` y `HQ_DB_PATH=<copia>`; en las pruebas `HQ_VAULT_PATH=off`. Por defecto HQ busca el vault solo en `G:\Mi unidad\Liiot`.
+- Windows PowerShell 5.1: `Invoke-RestMethod` entrega un arreglo JSON como un solo objeto en la tubería (envolver con `@(...) | ForEach-Object { $_ }`) y muestra mal las tildes; los datos están bien.
 
 Cómo verificar antes de entregar:
 

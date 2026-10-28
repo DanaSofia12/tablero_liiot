@@ -1,13 +1,15 @@
 """Aplicación FastAPI: API, canal en vivo, bot de Telegram e interfaz compilada."""
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import bot, config
+from . import bot, config, vault
 from .api import router
 from .db import init_db
 from .realtime import hub
@@ -21,7 +23,11 @@ async def lifespan(_app: FastAPI):
     init_db()
     seed_if_empty()
     await bot.start_bot()
+    sync_task = asyncio.create_task(vault.run_loop())
     yield
+    sync_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await sync_task
     await bot.stop_bot()
 
 
