@@ -1,7 +1,8 @@
 """Entiende lo que se le escribe al bot en lenguaje normal, sin IA de pago: reglas y comparación de textos.
 
-Ejemplos que entiende: «¿qué tengo hoy?», «terminé la tabla de precios», «algo me frena con BLP-5 porque falta el logo»,
-«mueve BLP-3 para el viernes», «nueva tarea: llamar a la tercera empresa el jueves», «¿cómo va el equipo?».
+Ejemplos que entiende: «¿qué tengo hoy?», «terminé la tabla de precios», «pausa la tabla porque falta el logo»,
+«mueve la tabla para el viernes», «nueva tarea: llamar a la tercera empresa el jueves», «¿cómo va el equipo?»,
+«estoy en reunión», «hoy trabajo en el guion», «terminé por hoy».
 Todo son funciones puras (fáciles de probar); bot.py decide qué hacer con el resultado.
 """
 from __future__ import annotations
@@ -55,7 +56,7 @@ def words(text: str) -> list[str]:
 
 @dataclass
 class Intent:
-    kind: str  # saludo, gracias, ayuda, hoy, semana, pendientes, equipo, resumen, silencio, nueva,
+    kind: str  # saludo, gracias, ayuda, hoy, semana, pendientes, equipo, resumen, silencio, nueva, mi_estado, presencia,
     #            hecha, empezar, revision, bloqueo, fecha, ver, desconocido
     phrase: str = ""  # palabras que describen la tarea (sin la orden ni la fecha)
     key: str | None = None  # clave explícita, p. ej. BLP-3
@@ -65,6 +66,7 @@ class Intent:
     hours: int | None = None  # para silencio
     owner_id: str | None = None  # «para Juan David»
     project_id: str | None = None  # «en SST»
+    state: str = ""  # presencia: trabajando, en_reunion, disponible, descansando
 
 
 # ---------------------------------------------------------------- fechas
@@ -132,16 +134,28 @@ def _day_of_month(day: int, today: date) -> date | None:
 KEY_RE = re.compile(r"\b([a-z]{2,5})\s?-\s?(\d{1,4})\b", re.I)
 GREETING = _rx(r"^\s*(?:hola+|holi|buenas|buen dia|buenos dias|buenas tardes|buenas noches|hey|que mas|que tal|como estas|saludos)\b")
 THANKS = _rx(r"^\s*(?:mil )?(?:gracias|grax|genial|perfecto|super|listo|dale|chevere|bacano|de una|ok|okay|vale)\b")
-# Acciones sobre una tarea (se revisan primero)
+# Estado en la oficina (se revisa antes que las acciones: «terminé por hoy» no es terminar una tarea)
+PRESENCE = [
+    ("descansando", _rx(r"\b(?:me voy a descansar|voy a descansar|estoy descansando|me tomo un descanso|termine por hoy|acabe por hoy|"
+                        r"cierro por hoy|ya me desconecto|me desconecto|me voy a almorzar|voy a almorzar|estoy almorzando|"
+                        r"salgo a almorzar|hasta manana|me retiro)\b")),
+    ("en_reunion", _rx(r"\b(?:estoy|ando|voy|entro|me meto|me voy|sigo) (?:en|a|para) (?:una |la |mi |otra )?reunion\b|^\s*en reunion\b|"
+                       r"\btengo (?:una )?reunion (?:ahora|ya)\b")),
+    ("disponible", _rx(r"\b(?:estoy|ya estoy|quede|ando|sigo) (?:disponible|libre)\b|\b(?:sali|termine|acabe) (?:de )?(?:la |mi )?reunion\b")),
+    ("trabajando", _rx(r"\b(?:estoy trabajando|voy a trabajar|hoy trabajo|hoy voy a trabajar|estoy enfocad[oa]|hoy me enfoco|hoy voy con)"
+                       r"(?: en| con)?\b(?P<rest>.*)$")),
+]
+# Acciones sobre una tarea
 ACTIONS = [
     ("nueva", _rx(r"^\s*(?:por favor |porfa )?(?:crea(?:r|me)?|nueva|agrega(?:r|me)?|anota(?:r|me)?|apunta(?:r|me)?|recuerdame|recordarme|anade)\b"
                   r"(?: una| la)?(?: nueva)?(?: tarea)?(?: que| de)?(?P<rest>.*)$")),
     ("nueva", _rx(r"^\s*(?:tengo que|hay que|toca|necesitamos)\b(?P<rest>.+)$")),
     # «quedó lista para revisar» es revisión, no hecha: revisión va primero
-    ("revision", _rx(r"\b(?:para revisar|a revision|en revision|revisen|para que la revisen|para que lo revisen)\b(?P<rest>.*)$")),
+    ("revision", _rx(r"\b(?:para revisar|a revision|en revision|revisen|para que la revisen|para que lo revisen|lista para pruebas|"
+                     r"listo para pruebas|a pruebas|en pruebas|para probar|para pruebas)\b(?P<rest>.*)$")),
     ("hecha", _rx(r"\b(?:ya )?(?:termine|terminamos|acabe|acabamos|finalice|complete|entregue|ya hice|ya (?:esta|quedo) (?:lista|listo)|quedo (?:lista|listo))\b(?P<rest>.*)$")),
     ("bloqueo", _rx(r"\b(?:bloquead[oa]s?|trabad[oa]s?|atascad[oa]s?|me frena|algo me frena|me tiene frenad[oa]|no puedo avanzar|no puedo seguir|"
-                    r"estoy esperando|necesito ayuda)\b(?P<rest>.*)$")),
+                    r"estoy esperando|necesito ayuda|pausa(?:r|la|lo)?|en pausa|deja(?:la|lo)? en pausa)\b(?P<rest>.*)$")),
     ("empezar", _rx(r"\b(?:ya )?(?:empece|empiezo|empezamos|arranque|arranco|comence|comienzo|estoy con|estoy haciendo|voy con|me pongo con|inicie)\b(?P<rest>.*)$")),
     ("fecha", _rx(r"\b(?:mueve(?:la|lo)?|mover|cambia(?:r)? (?:la )?fecha(?: de)?|aplaza(?:r|la|lo)?|pospon(?:er|la|lo)?|corre(?:r|la|lo)?|"
                   r"pasa(?:la|lo)? para|reprograma(?:r|la|lo)?|necesito mas tiempo(?: para| con)?)\b(?P<rest>.*)$")),
@@ -149,7 +163,8 @@ ACTIONS = [
 # Preguntas generales
 INFO = [
     ("ayuda", _rx(r"\b(?:ayuda|que puedes hacer|como funciona|como te uso|comandos|que sabes hacer|como te hablo)\b")),
-    ("silencio", _rx(r"\b(?:silencio|no me escribas|pausa|no molestes|callate)\b")),
+    ("silencio", _rx(r"\b(?:silencio|no me escribas|no molestes|callate)\b")),
+    ("mi_estado", _rx(r"\b(?:mi estado|en que estoy|como aparezco|que dice la oficina|cambiar mi estado)\b")),
     ("equipo", _rx(r"\b(?:equipo|los demas|como van todos|que estan haciendo|quien esta|en que anda)\b")),
     ("resumen", _rx(r"\b(?:resumen|como vamos|como va el proyecto|como va el piloto|como va el lanzamiento|avance|indicadores|estado del proyecto)\b")),
     ("semana", _rx(r"\b(?:semana|proximos dias|que viene)\b")),
@@ -178,6 +193,17 @@ def understand(text: str, today: date, projects: dict[str, str] | None = None, p
             return Intent("saludo")
     key_match = KEY_RE.search(f, start)
     key = f"{key_match.group(1).upper()}-{key_match.group(2)}" if key_match else None
+
+    for state, pattern in PRESENCE:
+        m = pattern.search(f, start)
+        if not m:
+            continue
+        intent = Intent("presencia", key=key, state=state)
+        if state == "trabajando":
+            rest_from = m.start("rest")
+            intent.phrase = _phrase(f, rest_from, len(f), [], key)
+            intent.title = _original(raw, index, rest_from, len(f)).strip(" .:,;-")[:160]
+        return intent
 
     for kind, pattern in ACTIONS:
         m = pattern.search(f, start)

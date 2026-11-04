@@ -36,29 +36,19 @@ export function spotFor(memberId: string, state: PresenceState, activity: string
   switch (state) {
     case 'trabajando':
       return { x: desk.cx, z: 2.25, face: 0, pose: activity === 'Habla por teléfono' ? 'phone' : 'type', seated: true }
-    case 'foco':
-      return { x: desk.cx, z: 2.25, face: 0, pose: 'focus', seated: true }
-    case 'bloqueado':
-      return { x: desk.x0 - 0.45, z: 2.45, face: 0.3, pose: 'sad', seated: false }
-    case 'celebrando':
-      return { x: desk.cx, z: 2.25, face: 0, pose: 'cheer', seated: false }
-    case 'revision':
-      return memberId === 'dana'
-        ? { x: 4.1, z: 0.95, face: Math.PI, pose: 'review', seated: false }
-        : { x: [5.55, 5.55, 6.55][slot], z: 4.45, face: Math.PI, pose: 'review', seated: false }
+    case 'en_reunion':
+      return [
+        { x: 6.3, z: 5.3, face: 0, pose: 'talk' as Pose, seated: false },
+        { x: 4.95, z: 6.7, face: Math.PI / 2, pose: 'talk' as Pose, seated: false },
+        { x: 7.65, z: 6.4, face: -Math.PI / 2, pose: 'talk' as Pose, seated: false },
+      ][slot]
     case 'disponible':
       return [
         { x: 1.45, z: 4.85, face: -Math.PI / 2, pose: 'idle' as Pose, seated: false },
         { x: 2.2, z: 5.75, face: -Math.PI / 2 - 0.4, pose: 'idle' as Pose, seated: false },
         { x: 1.5, z: 6.6, face: -Math.PI / 2 - 0.2, pose: 'idle' as Pose, seated: false },
       ][slot]
-    case 'reunion':
-      return [
-        { x: 6.3, z: 5.3, face: 0, pose: 'talk' as Pose, seated: false },
-        { x: 4.95, z: 6.7, face: Math.PI / 2, pose: 'talk' as Pose, seated: false },
-        { x: 7.65, z: 6.4, face: -Math.PI / 2, pose: 'talk' as Pose, seated: false },
-      ][slot]
-    case 'fuera':
+    case 'descansando':
     default:
       return { x: [9.85, 10.5, 11.15][slot], z: 7.35, face: 0, pose: 'sleep', seated: true }
   }

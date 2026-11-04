@@ -6,22 +6,28 @@ import contextlib
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from . import bot, config, vault
-from .api import router
+from . import auth, bot, config, migrate, vault
+from .api import public, router
+from .api_auth import accounts, router as auth_router
+from .catalog import APP_NAME
 from .db import init_db
 from .realtime import hub
 from .seed import seed_if_empty
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
+MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
-    seed_if_empty()
+    fresh = seed_if_empty()
+    migrate.upgrade(fresh=fresh)
+    auth.announce_setup()
     await bot.start_bot()
     sync_task = asyncio.create_task(vault.run_loop())
     yield
@@ -31,12 +37,32 @@ async def lifespan(_app: FastAPI):
     await bot.stop_bot()
 
 
-app = FastAPI(title="Liiot HQ", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title=APP_NAME, version="0.2.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def guard(request: Request, call_next):
+    """Los cambios a la API solo se aceptan desde la propia interfaz (encabezado X-Liiot), no desde otras páginas."""
+    if request.method in MUTATING and request.url.path.startswith("/api/") and request.headers.get("x-liiot") != "1":
+        return JSONResponse({"detail": "Solicitud rechazada."}, status_code=403)
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    return response
+
+
+app.include_router(public)
+app.include_router(auth_router)
+app.include_router(accounts)
 app.include_router(router)
 
 
 @app.websocket("/ws")
 async def live(ws: WebSocket) -> None:
+    if auth.resolve(ws.cookies.get(auth.COOKIE)) is None:
+        await ws.close(code=4401)
+        return
     await hub.connect(ws)
     try:
         while True:
@@ -47,9 +73,9 @@ async def live(ws: WebSocket) -> None:
         hub.disconnect(ws)
 
 
-NO_BUILD = """<!doctype html><meta charset="utf-8"><title>Liiot HQ</title>
+NO_BUILD = f"""<!doctype html><meta charset="utf-8"><title>{APP_NAME}</title>
 <body style="font-family:system-ui;background:#07050d;color:#f6f1ff;padding:48px">
-<h1>Liiot HQ está corriendo</h1>
+<h1>{APP_NAME} está corriendo</h1>
 <p>La API responde en <code>/api</code>, pero la interfaz no está compilada.</p>
 <p>Abre <code>iniciar.cmd</code> (compila y abre todo) o <code>desarrollo.ps1</code> (modo desarrollo en el puerto 5173).</p>
 </body>"""

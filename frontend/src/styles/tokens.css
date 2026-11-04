@@ -1,10 +1,13 @@
-/* Liiot HQ · sistema visual «aurora»
-   Paleta del brandbook de Liiot (violeta, naranja, rosa, ámbar) llevada a luz, cromo y grano,
-   según el tablero de referencias: fondos casi negros, cintas de luz en degradado y textura de película. */
+/* Liiot Hub · sistema visual
+   Liiot: paleta del brandbook de Liiot (violeta, naranja, rosa, ámbar) llevada a luz, cromo y grano.
+   Bleepy: brandbook de Bleepy (naranja #F36F2B, azul #3061AD / #658DB9, crema #E2E5B2, noche #231F20)
+   sobre azul noche (o papel crema en claro), con acentos «gradient map». Groka → Unbounded (la libre más parecida);
+   Times New Roman para acentos. */
 :root {
   --font-display: 'Unbounded Variable', 'Unbounded', system-ui, sans-serif;
   --font-ui: 'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-pixel: 'Pixelify Sans', ui-monospace, 'Cascadia Mono', monospace;
+  --font-accent: var(--font-pixel);
 
   --r-xs: 8px;
   --r-sm: 12px;
@@ -13,7 +16,7 @@
   --r-xl: 30px;
   --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --rail: 86px;
+  --rail: 84px;
 
   --violet: #8b45cc;
   --violet-deep: #5a228b;
@@ -22,24 +25,25 @@
   --amber: #ffb547;
   --lilac: #c9a6f2;
   --ok: #34d399;
-  --warn: #fbbf24;
+  --warn: #f0a93b;
   --bad: #fb5a7a;
   --info: #60a5fa;
 
   /* oscuro (por defecto) */
   --bg: #07050d;
   --ink: #f6f1ff;
-  --ink-2: rgba(246, 241, 255, 0.74);
-  --ink-3: rgba(246, 241, 255, 0.52);
+  --ink-2: rgba(246, 241, 255, 0.76);
+  --ink-3: rgba(246, 241, 255, 0.55);
   --ink-4: rgba(246, 241, 255, 0.3);
-  --panel: rgba(18, 12, 31, 0.7);
-  --panel-2: rgba(32, 22, 52, 0.66);
-  --panel-solid: #120c20;
+  --panel: rgba(18, 12, 31, 0.72);
+  --panel-2: rgba(32, 22, 52, 0.68);
+  --panel-solid: #140d23;
   --field: rgba(255, 255, 255, 0.055);
   --line: rgba(255, 255, 255, 0.085);
   --line-2: rgba(255, 255, 255, 0.17);
   --acc: #a874ec;
   --acc-2: #ff7a45;
+  --on-acc: #ffffff;
   --grad: linear-gradient(115deg, #5a228b 0%, #8b45cc 28%, #e04b66 58%, #ff6a33 80%, #ffb547 100%);
   --grad-hot: linear-gradient(115deg, #8b45cc 0%, #e04b66 55%, #ff6a33 100%);
   --grad-soft: linear-gradient(135deg, rgba(139, 69, 204, 0.32), rgba(255, 106, 51, 0.18));
@@ -48,21 +52,26 @@
   --aurora-b: rgba(224, 75, 102, 0.38);
   --aurora-c: rgba(255, 106, 51, 0.34);
   --aurora-d: rgba(255, 181, 71, 0.24);
-  --grain: 0.11;
+  --grain: 0.1;
   --shadow: 0 18px 50px -22px rgba(0, 0, 0, 0.7);
   --glow: 0 0 0 1px rgba(168, 116, 236, 0.38), 0 12px 40px -12px rgba(139, 69, 204, 0.6);
   --hi: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  /* gráficas (validadas: contraste ≥ 3:1 y separación para daltonismo) */
+  --viz-done: #a874ec;
+  --viz-plan: #6a6580;
+  --viz-grid: rgba(255, 255, 255, 0.08);
+  --viz-surface: #160f27;
   color-scheme: dark;
 }
 
 [data-mode='light'] {
   --bg: #fff4ee;
   --ink: #1d1029;
-  --ink-2: rgba(29, 16, 41, 0.74);
-  --ink-3: rgba(29, 16, 41, 0.54);
+  --ink-2: rgba(29, 16, 41, 0.76);
+  --ink-3: rgba(29, 16, 41, 0.56);
   --ink-4: rgba(29, 16, 41, 0.3);
-  --panel: rgba(255, 255, 255, 0.66);
-  --panel-2: rgba(255, 255, 255, 0.8);
+  --panel: rgba(255, 255, 255, 0.7);
+  --panel-2: rgba(255, 255, 255, 0.84);
   --panel-solid: #ffffff;
   --field: rgba(45, 18, 70, 0.055);
   --line: rgba(70, 25, 100, 0.1);
@@ -73,41 +82,85 @@
   --aurora-b: rgba(255, 120, 160, 0.26);
   --aurora-c: rgba(255, 145, 90, 0.3);
   --aurora-d: rgba(255, 205, 110, 0.4);
-  --grain: 0.08;
+  --grain: 0.07;
   --shadow: 0 18px 50px -26px rgba(90, 34, 139, 0.38);
   --glow: 0 0 0 1px rgba(109, 47, 176, 0.25), 0 12px 40px -14px rgba(139, 69, 204, 0.38);
   --hi: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --viz-done: #7b3fc4;
+  --viz-plan: #857e9b;
+  --viz-grid: rgba(70, 25, 100, 0.1);
+  --viz-surface: #ffffff;
   color-scheme: light;
 }
 
-/* Universo Bleepy: «planeta creativo» (provisional hasta la identidad de Saray) */
+/* ============ mundo Bleepy ============
+   Brandbook de Bleepy con la estética de Liiot: azul noche de fondo, vidrio, grano y luces suaves.
+   Lo que resalta (botones, avances, números, títulos) lleva su «gradient map»: azul → rojo → naranja → amarillo.
+   Sobre naranja el texto va en azul noche. En claro, papel crema con los mismos remolinos. */
 [data-uni='bleepy'] {
-  --font-display: 'Fredoka Variable', 'Fredoka', system-ui, sans-serif;
-  --acc: #9b80ff;
-  --acc-2: #ff5fb4;
-  --grad: linear-gradient(115deg, #3dd6f5 0%, #7c5cff 34%, #ff4fa3 68%, #ffd45c 100%);
-  --grad-hot: linear-gradient(115deg, #7c5cff 0%, #ff4fa3 100%);
-  --grad-soft: linear-gradient(135deg, rgba(124, 92, 255, 0.3), rgba(61, 214, 245, 0.18));
-  --chrome: conic-gradient(from 200deg at 50% 50%, #1a1460, #bdf3ff, #ff9fd0, #5b2ee8, #fff3b0, #7c5cff, #1a1460);
-  --aurora-a: rgba(124, 92, 255, 0.5);
-  --aurora-b: rgba(255, 79, 163, 0.34);
-  --aurora-c: rgba(61, 214, 245, 0.28);
-  --aurora-d: rgba(255, 212, 92, 0.22);
-  --bg: #06051a;
-  --panel: rgba(16, 13, 48, 0.7);
-  --panel-2: rgba(30, 25, 80, 0.62);
-  --panel-solid: #110e36;
+  --font-accent: 'Times New Roman', Times, serif;
+  --bg: #0f1a3d;
+  --ink: #f6f3e4;
+  --ink-2: rgba(246, 243, 228, 0.8);
+  --ink-3: rgba(246, 243, 228, 0.6);
+  --ink-4: rgba(246, 243, 228, 0.32);
+  --panel: rgba(19, 32, 74, 0.72);
+  --panel-2: rgba(33, 50, 102, 0.62);
+  --panel-solid: #15234f;
+  --field: rgba(226, 229, 178, 0.07);
+  --line: rgba(226, 229, 178, 0.1);
+  --line-2: rgba(226, 229, 178, 0.2);
+  --acc: #f36f2b;
+  --acc-2: #8fb0e8;
+  --on-acc: #14214f;
+  --grad: linear-gradient(115deg, #8fb0e8 0%, #ff7a5c 42%, #f36f2b 70%, #ffc061 100%);
+  --grad-hot: linear-gradient(115deg, #ff8f52 0%, #f36f2b 55%, #ee5f2a 100%);
+  --grad-soft: linear-gradient(135deg, rgba(48, 97, 173, 0.32), rgba(243, 111, 43, 0.16));
+  --chrome: conic-gradient(from 200deg at 50% 50%, #0f1a3d, #e2e5b2, #f36f2b, #3061ad, #fffbea, #658db9, #0f1a3d);
+  --aurora-a: rgba(48, 97, 173, 0.55);
+  --aurora-b: rgba(214, 69, 58, 0.32);
+  --aurora-c: rgba(243, 111, 43, 0.4);
+  --aurora-d: rgba(226, 229, 178, 0.12);
+  --grain: 0.13;
+  --shadow: 0 18px 50px -22px rgba(3, 8, 28, 0.75);
+  --glow: 0 0 0 1px rgba(243, 111, 43, 0.42), 0 12px 40px -12px rgba(243, 111, 43, 0.5);
+  --viz-done: #f36f2b;
+  --viz-plan: #8fa3c9;
+  --viz-grid: rgba(226, 229, 178, 0.09);
+  --viz-surface: #15234f;
 }
 
 [data-uni='bleepy'][data-mode='light'] {
-  --bg: #f6f4ff;
-  --acc: #5b2ee8;
-  --acc-2: #d92f86;
-  --panel: rgba(255, 255, 255, 0.68);
-  --panel-2: rgba(255, 255, 255, 0.82);
-  --panel-solid: #ffffff;
-  --aurora-a: rgba(124, 92, 255, 0.3);
-  --aurora-b: rgba(255, 79, 163, 0.22);
-  --aurora-c: rgba(61, 214, 245, 0.28);
-  --aurora-d: rgba(255, 212, 92, 0.34);
+  --bg: #efe9cf;
+  --ink: #1c2142;
+  --ink-2: rgba(28, 33, 66, 0.8);
+  --ink-3: rgba(28, 33, 66, 0.6);
+  --ink-4: rgba(28, 33, 66, 0.32);
+  --panel: rgba(255, 252, 240, 0.74);
+  --panel-2: rgba(255, 253, 246, 0.9);
+  --panel-solid: #fffcf2;
+  --field: rgba(48, 97, 173, 0.07);
+  --line: rgba(28, 33, 66, 0.1);
+  --line-2: rgba(28, 33, 66, 0.2);
+  --acc: #c24914;
+  --acc-2: #3061ad;
+  --on-acc: #1c2142;
+  --grad: linear-gradient(115deg, #3061ad 0%, #d6453a 50%, #e0611c 100%);
+  --grad-soft: linear-gradient(135deg, rgba(48, 97, 173, 0.16), rgba(243, 111, 43, 0.14));
+  --aurora-a: rgba(48, 97, 173, 0.5);
+  --aurora-b: rgba(214, 69, 58, 0.42);
+  --aurora-c: rgba(243, 111, 43, 0.5);
+  --aurora-d: rgba(101, 141, 185, 0.36);
+  --grain: 0.12;
+  --shadow: 0 18px 44px -26px rgba(28, 33, 66, 0.35);
+  --glow: 0 0 0 1px rgba(194, 73, 20, 0.3), 0 12px 40px -14px rgba(243, 111, 43, 0.4);
+  --hi: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --ok: #138a5a;
+  --warn: #a8670c;
+  --bad: #c92a4a;
+  --info: #2563c9;
+  --viz-done: #d9561a;
+  --viz-plan: #6f7ea3;
+  --viz-grid: rgba(28, 33, 66, 0.1);
+  --viz-surface: #fffcf2;
 }

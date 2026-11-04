@@ -1,4 +1,4 @@
-"""Sincronización en dos vías entre HQ y la bóveda de Obsidian de Liiot.
+"""Sincronización en dos vías entre Liiot Hub y la bóveda de Obsidian de Liiot.
 
 Estructura del vault (ver su AGENTS.md):
 - Proyecto: carpeta 10_Proyectos/<Nombre>/ con la nota <Nombre>.md (frontmatter type: project, id PRJ-…).
@@ -10,6 +10,7 @@ Reglas:
 - HQ nunca borra archivos. Si una nota desaparece dos revisiones seguidas, la tarea se archiva en HQ.
 - Fusión en tres vías por campo: se guarda lo último sincronizado de cada lado; gana el lado que cambió y,
   si cambiaron los dos, el cambio más reciente (fecha de la nota contra la de la tarea).
+- Antes de la primera sincronización de cada versión nueva se copian las notas a backend/data/respaldos/.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ import asyncio
 import json
 import logging
 import re
+import shutil
 import threading
 import unicodedata
 from collections import deque
@@ -31,7 +33,8 @@ from sqlmodel import Session, select
 from . import config
 from . import services as svc
 from .db import session_scope
-from .models import Member, Project, Setting, Task, VaultLink, VaultProjectLink
+from .catalog import PAUSED
+from .models import Member, Phase, Project, Setting, Stage, Task, VaultLink, VaultProjectLink
 
 log = logging.getLogger("liiot.vault")
 
@@ -50,14 +53,18 @@ _wake: asyncio.Event | None = None
 
 # ---------------------------------------------------------------- vocabulario vault ↔ HQ
 STATUS_IN = {
-    "por_hacer": "por_hacer", "por hacer": "por_hacer", "pendiente": "por_hacer", "todo": "por_hacer",
+    "por_hacer": "pendiente", "por hacer": "pendiente", "pendiente": "pendiente", "pendientes": "pendiente", "todo": "pendiente",
     "en_progreso": "en_progreso", "en progreso": "en_progreso", "haciendo": "en_progreso", "doing": "en_progreso",
-    "en_revision": "en_revision", "en revision": "en_revision", "revision": "en_revision", "review": "en_revision",
-    "bloqueada": "bloqueada", "bloqueado": "bloqueada", "blocked": "bloqueada",
-    "hecho": "hecha", "hecha": "hecha", "done": "hecha", "completado": "hecha", "completada": "hecha",
-    "terminado": "hecha", "terminada": "hecha", "cerrado": "hecha", "cerrada": "hecha",
+    "en_pausa": "en_pausa", "en pausa": "en_pausa", "pausa": "en_pausa", "pausada": "en_pausa", "pausado": "en_pausa",
+    "bloqueada": "en_pausa", "bloqueado": "en_pausa", "blocked": "en_pausa",
+    "pruebas": "pruebas", "en_pruebas": "pruebas", "en pruebas": "pruebas", "prueba": "pruebas", "testing": "pruebas",
+    "en_revision": "pruebas", "en revision": "pruebas", "revision": "pruebas", "review": "pruebas",
+    "hecho": "finalizada", "hecha": "finalizada", "finalizada": "finalizada", "finalizado": "finalizada", "done": "finalizada",
+    "completado": "finalizada", "completada": "finalizada", "terminado": "finalizada", "terminada": "finalizada",
+    "cerrado": "finalizada", "cerrada": "finalizada",
 }
-STATUS_OUT = {"hecha": "hecho"}  # el vault escribe «hecho»
+# Pendiente y Finalizada se escriben como ya los usan las plantillas y los tableros (Bases) del vault
+STATUS_OUT = {"pendiente": "por_hacer", "finalizada": "hecho"}
 PRIORITY_IN = {"p0": "P0", "critica": "P0", "urgente": "P0", "p1": "P1", "alta": "P1", "p2": "P2", "media": "P2",
                "normal": "P2", "p3": "P3", "baja": "P3"}
 PRIORITY_OUT = {"P0": "critica", "P1": "alta", "P2": "media", "P3": "baja"}
@@ -80,17 +87,20 @@ TYPE_HINTS = [
     ("negocio", r"\b(precios?|tarifas?|cobro|modelo de negocio|cliente|ventas|contactar)\b"),
     ("marketing", r"\b(marketing|contenido|redes|campana)\b"),
 ]
-EFFORT_IN = {"s": "S", "m": "M", "l": "L", "pequeno": "S", "mediano": "M", "grande": "L"}
 TRUE_WORDS = {"true", "si", "yes", "1"}
 
-FIELDS = ("title", "status", "owner", "type", "priority", "due", "start", "effort", "phase", "blocker", "archived", "summary")
+FIELDS = ("title", "status", "owner", "type", "priority", "due", "start", "phase", "stage", "blocker", "archived", "checklist", "summary")
 VAULT_KEY = {"title": "titulo", "status": "status", "owner": "responsable", "type": "categoria", "priority": "prioridad",
-             "due": "vence", "start": "inicio", "effort": "esfuerzo", "phase": "fase", "blocker": "bloqueo", "archived": "archivada"}
+             "due": "vence", "start": "inicio", "phase": "fase", "stage": "etapa", "blocker": "bloqueo", "archived": "archivada",
+             "checklist": "checklist"}
 PATCH_KEY = {"title": "title", "status": "status", "owner": "ownerId", "type": "type", "priority": "priority", "due": "dueDate",
-             "start": "startDate", "effort": "effort", "phase": "phase", "blocker": "blockerReason", "summary": "summary"}
+             "start": "startDate", "blocker": "blockerReason", "summary": "summary"}
 LABEL = {"title": "título", "status": "estado", "owner": "responsable", "type": "tipo", "priority": "prioridad", "due": "fecha",
-         "start": "inicio", "effort": "esfuerzo", "phase": "fase", "blocker": "bloqueo", "archived": "archivo", "summary": "resumen"}
-QUOTED_KEYS = {"project", "responsable", "categoria", "titulo", "bloqueo", "fase", "lider"}
+         "start": "inicio", "phase": "fase", "stage": "etapa", "blocker": "motivo de pausa", "archived": "archivo",
+         "checklist": "checklist", "summary": "descripción"}
+QUOTED_KEYS = {"project", "responsable", "categoria", "titulo", "bloqueo", "fase", "etapa", "lider"}
+OPTIONAL = ("due", "start", "phase", "stage", "blocker", "summary", "checklist")
+BACKUP_FLAG = "vault_backup_v2"
 
 
 def fold(text) -> str:
@@ -127,6 +137,80 @@ class People:
 
     def name(self, member_id: str | None) -> str:
         return self.names.get(member_id or "", member_id or "")
+
+
+class Ctx:
+    """Fases y etapas de Liiot Hub, para traducir «fase» y «etapa» de las notas."""
+
+    def __init__(self, s: Session):
+        self.s = s
+        self.phases = {p.id: p for p in s.exec(select(Phase))}
+        self.stages = {st.id: st for st in s.exec(select(Stage))}
+
+    def phase_key(self, phase_id: int | None) -> str:
+        phase = self.phases.get(phase_id) if phase_id else None
+        return phase.key if phase else ""
+
+    def stage_name(self, stage_id: int | None) -> str:
+        stage = self.stages.get(stage_id) if stage_id else None
+        return stage.name if stage else ""
+
+    def phase_id_for(self, project_id: str, key: str) -> int | None:
+        """Fase del proyecto con esa clave; si no existe se crea (así llegan las fases nuevas desde Obsidian)."""
+        clean = str(key or "").strip()
+        if not clean:
+            return None
+        folded = fold(clean)
+        for p in self.phases.values():
+            if p.project_id == project_id and (fold(p.key) == folded or fold(p.name) == folded):
+                return p.id
+        from .migrate import humanize_phase
+
+        siblings = [p for p in self.phases.values() if p.project_id == project_id]
+        phase = Phase(project_id=project_id, order=max((p.order for p in siblings), default=-1) + 1, key=clean,
+                      name=humanize_phase(clean), status="pendiente" if siblings else "en_curso")
+        self.s.add(phase)
+        self.s.flush()
+        self.phases[phase.id] = phase
+        if not siblings:
+            project = self.s.get(Project, project_id)
+            if project:
+                project.current_phase_id = phase.id
+                self.s.add(project)
+        activity(f"Fase nueva desde Obsidian: {phase.name}")
+        return phase.id
+
+    def stage_id_for(self, project_id: str, name: str) -> int | None:
+        folded = fold(name)
+        if not folded:
+            return None
+        for st in self.stages.values():
+            if st.project_id == project_id and fold(st.name) == folded:
+                return st.id
+        return None
+
+
+CHECK_RE = re.compile(r"^(?:[-*]\s*)?\[([ xX✓✔])\]\s*(.*)$")
+
+
+def checklist_raw(value) -> str:
+    """Checklist del frontmatter («[x] texto», «[ ] texto») en forma comparable."""
+    if value in (None, "", []):
+        return ""
+    items = value if isinstance(value, list) else [value]
+    out = []
+    for item in items:
+        text = str(item or "").strip()
+        m = CHECK_RE.match(text)
+        done, label = (m.group(1).strip() != "", m.group(2).strip()) if m else (False, text)
+        if label:
+            out.append([label, done])
+    return json.dumps(out, ensure_ascii=False)
+
+
+def checklist_hq(task: Task) -> str:
+    items = svc.checklist_of(task)
+    return json.dumps([[i["text"], i["done"]] for i in items], ensure_ascii=False) if items else ""
 
 
 # ---------------------------------------------------------------- notas
@@ -301,15 +385,16 @@ def raw_fields(note: Note) -> dict[str, str]:
         "priority": _fm_str(fm, "prioridad"),
         "due": _fm_str(fm, "vence"),
         "start": _fm_str(fm, "inicio"),
-        "effort": _fm_str(fm, "esfuerzo"),
         "phase": _fm_str(fm, "fase"),
+        "stage": _fm_str(fm, "etapa"),
         "blocker": _fm_str(fm, "bloqueo"),
         "archived": _fm_str(fm, "archivada"),
+        "checklist": checklist_raw(fm.get("checklist")),
         "summary": note.summary,
     }
 
 
-def hq_fields(task: Task) -> dict[str, str]:
+def hq_fields(task: Task, ctx: Ctx) -> dict[str, str]:
     return {
         "title": task.title,
         "status": task.status,
@@ -318,10 +403,11 @@ def hq_fields(task: Task) -> dict[str, str]:
         "priority": task.priority,
         "due": svc.iso_d(task.due_date) or "",
         "start": svc.iso_d(task.start_date) or "",
-        "effort": task.effort,
-        "phase": task.phase or "",
-        "blocker": task.blocker_reason or "",
+        "phase": ctx.phase_key(task.phase_id),
+        "stage": ctx.stage_name(task.stage_id),
+        "blocker": (task.blocker_reason or "") if task.status == PAUSED else "",
         "archived": "true" if task.archived else "false",
+        "checklist": checklist_hq(task),
         "summary": task.summary or "",
     }
 
@@ -335,7 +421,7 @@ def _iso(raw: str) -> str | None:
 
 def normalize(field: str, raw: str, people: People) -> str | None:
     """Valor del vault traducido a HQ, o None si está vacío o no se reconoce (entonces no pisa a HQ)."""
-    if field in ("title", "phase", "blocker", "summary"):
+    if field in ("title", "phase", "stage", "blocker", "summary", "checklist"):
         return raw or None
     if field == "status":
         return STATUS_IN.get(fold(raw))
@@ -347,8 +433,6 @@ def normalize(field: str, raw: str, people: People) -> str | None:
         return PRIORITY_IN.get(fold(raw))
     if field in ("due", "start"):
         return _iso(raw)
-    if field == "effort":
-        return EFFORT_IN.get(fold(raw))
     if field == "archived":
         return "true" if fold(raw) in TRUE_WORDS else "false"
     return None
@@ -357,7 +441,9 @@ def normalize(field: str, raw: str, people: People) -> str | None:
 def equivalent(field: str, normalized: str | None, hq_value: str) -> bool:
     if normalized == hq_value:
         return True
-    return normalized is None and hq_value == "" and field in ("due", "start", "phase", "blocker", "summary")
+    if field == "stage" and normalized and fold(normalized) == fold(hq_value):
+        return True
+    return normalized is None and hq_value in ("", "[]") and field in OPTIONAL
 
 
 def to_vault(field: str, hq_value: str, people: People) -> tuple[str, object] | None:
@@ -374,8 +460,11 @@ def to_vault(field: str, hq_value: str, people: People) -> tuple[str, object] | 
         return key, date.fromisoformat(hq_value) if hq_value else None
     if field == "archived":
         return key, True if hq_value == "true" else None
-    if field in ("phase", "blocker"):
+    if field in ("phase", "stage", "blocker"):
         return key, hq_value or None
+    if field == "checklist":
+        items = json.loads(hq_value) if hq_value else []
+        return key, [f"[{'x' if done else ' '}] {text}" for text, done in items] if items else None
     return key, hq_value
 
 
@@ -387,24 +476,36 @@ def infer_type(title: str) -> str:
     return "gestion"
 
 
-def base_json(note: Note, task: Task) -> str:
-    return json.dumps({"v": raw_fields(note), "h": hq_fields(task)}, ensure_ascii=False)
+def base_json(note: Note, task: Task, ctx: Ctx) -> str:
+    return json.dumps({"v": raw_fields(note), "h": hq_fields(task, ctx)}, ensure_ascii=False)
 
 
 def _ts(moment: datetime | None) -> float:
     return moment.timestamp() if moment else 0.0
 
 
-def merge(task: Task, note: Note, link: VaultLink, people: People) -> tuple[dict, dict, bool]:
+def merge(task: Task, note: Note, link: VaultLink, people: People, ctx: Ctx) -> tuple[dict, dict, bool]:
     """Fusión en tres vías: devuelve (cambios para HQ, cambios para la nota, hubo conflicto)."""
     base = json.loads(link.base_json or "{}")
     base_v, base_h = base.get("v", {}), base.get("h", {})
-    vault, hq = raw_fields(note), hq_fields(task)
+    vault, hq = raw_fields(note), hq_fields(task, ctx)
     to_hq: dict[str, str] = {}
     to_note: dict[str, object] = {}
     conflict = False
     vault_newer = note.mtime >= _ts(task.updated_at)
     for field in FIELDS:
+        if field not in base_v or field not in base_h:
+            # Campo que la versión anterior no sincronizaba: se completa el lado que está vacío, sin pisar nada
+            normalized = normalize(field, vault[field], people)
+            if field == "summary" or equivalent(field, normalized, hq[field]):
+                continue
+            if normalized is None and hq[field] not in ("", "[]"):
+                out = to_vault(field, hq[field], people)
+                if out:
+                    to_note[out[0]] = out[1]
+            elif normalized is not None and hq[field] in ("", "[]"):
+                to_hq[field] = normalized
+            continue
         v_changed = field in base_v and vault[field] != base_v[field]
         h_changed = field in base_h and hq[field] != base_h[field]
         if not (v_changed or h_changed):
@@ -424,20 +525,34 @@ def merge(task: Task, note: Note, link: VaultLink, people: People) -> tuple[dict
     return to_hq, to_note, conflict
 
 
-def to_patch(changes: dict[str, str], vault: dict[str, str]) -> dict:
+def to_patch(changes: dict[str, str], vault: dict[str, str], task: Task, ctx: Ctx) -> dict:
     patch: dict = {}
     for field, value in changes.items():
         if field == "archived":
             patch["archived"] = value == "true"
+        elif field == "phase":
+            patch["phaseId"] = ctx.phase_id_for(task.project_id, value)
+        elif field == "stage":
+            stage_id = ctx.stage_id_for(task.project_id, value)
+            if stage_id is not None:
+                patch["stageId"] = stage_id
+            else:
+                activity(f"{task.key}: la etapa «{value}» no existe en Liiot Hub (créala en Fases)")
+        elif field == "checklist":
+            items = json.loads(value) if value else []
+            patch["checklist"] = [{"text": text, "done": done} for text, done in items]
+        elif field == "blocker" and task.status != PAUSED and changes.get("status") != PAUSED:
+            continue  # un motivo de pausa en una tarea que no está en pausa no cambia nada
         else:
             patch[PATCH_KEY[field]] = value
-    if patch.get("status") == "bloqueada" and "blockerReason" not in patch:
-        patch["blockerReason"] = vault.get("blocker") or "Marcada como bloqueada en Obsidian"
+    if patch.get("status") == PAUSED and "blockerReason" not in patch:
+        patch["blockerReason"] = vault.get("blocker") or "Marcada en pausa en Obsidian"
     return patch
 
 
 # ---------------------------------------------------------------- textos de notas nuevas
-def task_note_text(task: Task, note_id: str, project: Project, people: People, today: date) -> str:
+def task_note_text(task: Task, note_id: str, project: Project, people: People, today: date, ctx: Ctx) -> str:
+    checklist = to_vault("checklist", checklist_hq(task), people)
     fm = {
         "id": note_id,
         "type": "task",
@@ -448,9 +563,10 @@ def task_note_text(task: Task, note_id: str, project: Project, people: People, t
         "prioridad": PRIORITY_OUT.get(task.priority),
         "vence": task.due_date,
         "inicio": task.start_date,
-        "esfuerzo": task.effort,
-        "fase": task.phase or None,
-        "bloqueo": task.blocker_reason if task.status == "bloqueada" else None,
+        "fase": ctx.phase_key(task.phase_id) or None,
+        "etapa": ctx.stage_name(task.stage_id) or None,
+        "bloqueo": task.blocker_reason if task.status == PAUSED else None,
+        "checklist": checklist[1] if checklist else None,
         "archivada": True if task.archived else None,
         "hq": task.key,
         "tags": [],
@@ -460,7 +576,7 @@ def task_note_text(task: Task, note_id: str, project: Project, people: People, t
     lines = ["---", *(f"{k}: {fmt_value(v, k)}" for k, v in fm.items() if v is not None), "---", "", f"# {task.title}", ""]
     if task.summary:
         lines += [task.summary, ""]
-    lines.append(f"Creada desde Liiot HQ ({task.key}).")
+    lines.append(f"Creada desde Liiot Hub ({task.key}).")
     return "\n".join(lines) + "\n"
 
 
@@ -507,7 +623,7 @@ def project_note_text(project: Project, people: People, today: date) -> str:
         "",
         "## Archivos",
         "",
-        "Creado desde Liiot HQ.",
+        "Creado desde Liiot Hub.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -610,6 +726,7 @@ def _sync() -> dict:
         people = People(svc.members_all(s))
         dirs = _sync_projects(s, root, people, result, today)
         s.commit()
+        _backup_once(s, root, dirs)
         _sync_tasks(s, root, dirs, people, result, today)
         s.commit()
         STATE["stats"] = {
@@ -617,6 +734,26 @@ def _sync() -> dict:
             "notes": sum(1 for d in dirs.values() for _ in (root / d / TASKS_DIR[0] / TASKS_DIR[1]).glob("*.md")),
         }
     return result
+
+
+def _backup_once(s: Session, root: Path, dirs: dict[str, str]) -> None:
+    """Antes de la primera sincronización con el formato nuevo se copian las notas de proyecto y de tareas."""
+    if s.get(Setting, BACKUP_FLAG):
+        return
+    target = config.DB_PATH.parent / "respaldos" / f"vault-{datetime.now():%Y%m%d-%H%M%S}"
+    copied = 0
+    for rel in dirs.values():
+        folder = root / rel
+        notes = [folder / f"{Path(rel).name}.md", *sorted((folder / TASKS_DIR[0] / TASKS_DIR[1]).glob("*.md"))]
+        for path in notes:
+            if path.is_file():
+                dest = target / path.relative_to(root)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, dest)
+                copied += 1
+    s.add(Setting(key=BACKUP_FLAG, value_json=json.dumps({"at": svc.iso_dt(svc.utcnow()), "dir": str(target), "notes": copied})))
+    s.commit()
+    activity(f"Copia de seguridad de {copied} notas antes de actualizar el formato ({target.name})")
 
 
 def _scan_projects(root: Path) -> list[tuple[str, Note]]:
@@ -778,6 +915,7 @@ def _export_project(project: Project, people: People, root: Path, today: date) -
 
 
 def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, result: dict, today: date) -> None:
+    ctx = Ctx(s)
     projects = {p.id: p for p in svc.projects_all(s, include_archived=True)}
     tasks = {t.id: t for t in s.exec(select(Task))}
     links = {link.task_id: link for link in s.exec(select(VaultLink))}
@@ -818,19 +956,19 @@ def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, re
                 if task.project_id != pid:
                     task.project_id = pid
                     svc.log_event(s, task.id, ACTOR, SOURCE, "obsidian", f"Pasó al proyecto {project.name} (se movió la nota)")
-                _merge_linked(s, task, tnote, link, people, result, root, today)
+                _merge_linked(s, task, tnote, link, people, result, root, today, ctx)
             elif note_id in by_legacy and by_legacy[note_id].id not in links:
                 task = by_legacy[note_id]
-                links[task.id] = _first_link(s, task, tnote, people, result, root, today)
+                links[task.id] = _first_link(s, task, tnote, people, result, root, today, ctx)
             elif (twin := _twin(tnote, pid, by_key, links)) is not None:
                 # Otra instalación de HQ ya creó esta nota (trae «hq: CLAVE» y el mismo título): se vincula, no se duplica
                 if not twin.legacy_id:
                     twin.legacy_id = note_id
                     s.add(twin)
-                links[twin.id] = _first_link(s, twin, tnote, people, result, root, today)
+                links[twin.id] = _first_link(s, twin, tnote, people, result, root, today, ctx)
             else:
-                task = _import_task(s, tnote, note_id, project, people)
-                links[task.id] = VaultLink(task_id=task.id, note_id=note_id, path=tnote.rel, base_json=base_json(tnote, task),
+                task, tnote = _import_task(s, tnote, note_id, project, people, ctx, root, today)
+                links[task.id] = VaultLink(task_id=task.id, note_id=note_id, path=tnote.rel, base_json=base_json(tnote, task, ctx),
                                            synced_at=svc.utcnow())
                 s.add(links[task.id])
                 s.commit()
@@ -844,7 +982,7 @@ def _sync_tasks(s: Session, root: Path, dirs: dict[str, str], people: People, re
         project = projects.get(task.project_id)
         if project is None:
             continue
-        links[task.id] = _export_task(s, task, project, dirs[task.project_id], people, used_ids, root, today)
+        links[task.id] = _export_task(s, task, project, dirs[task.project_id], people, used_ids, root, today, ctx)
         seen.add(links[task.id].note_id)  # recién creada: no cuenta como nota desaparecida
         s.commit()
         result["exported"] += 1
@@ -883,40 +1021,41 @@ def _twin(tnote: Note, project_id: str, by_key: dict, links: dict) -> Task | Non
     return task if a == b or SequenceMatcher(None, a, b).ratio() >= 0.8 else None
 
 
-def _merge_linked(s: Session, task: Task, tnote: Note, link: VaultLink, people: People, result: dict, root: Path, today: date) -> None:
-    to_hq, to_note, conflict = merge(task, tnote, link, people)
+def _merge_linked(s: Session, task: Task, tnote: Note, link: VaultLink, people: People, result: dict, root: Path, today: date,
+                  ctx: Ctx) -> None:
+    to_hq, to_note, conflict = merge(task, tnote, link, people, ctx)
     if to_hq:
-        info = svc.apply_patch(s, task, to_patch(to_hq, raw_fields(tnote)), ACTOR, SOURCE)
+        info = svc.apply_patch(s, task, to_patch(to_hq, raw_fields(tnote), task, ctx), ACTOR, SOURCE)
         if info["changed"]:
             result["updatedHQ"] += 1
             result["changes"].append({"taskId": task.id, "info": info, "ownerId": task.owner_id, "key": task.key})
             activity(f"{task.key}: {', '.join(LABEL[f] for f in to_hq)} actualizado desde Obsidian")
     if conflict:
-        svc.log_event(s, task.id, ACTOR, SOURCE, "obsidian", "Cambió en HQ y en Obsidian a la vez: quedó el cambio más reciente")
+        svc.log_event(s, task.id, ACTOR, SOURCE, "obsidian", "Cambió en Liiot Hub y en Obsidian a la vez: quedó el cambio más reciente")
     if to_note:
         if "hq" not in tnote.fm:
             to_note["hq"] = task.key
         tnote = write_note(tnote, to_note, root, today)
         result["updatedVault"] += 1
         activity(f"{task.key}: Obsidian actualizado ({', '.join(to_note)})")
-    link.base_json = base_json(tnote, task)
+    link.base_json = base_json(tnote, task, ctx)
     link.synced_at = svc.utcnow()
     s.add(link)
 
 
-def _first_link(s: Session, task: Task, tnote: Note, people: People, result: dict, root: Path, today: date) -> VaultLink:
-    """Tarea de HQ que vino del vault (legacy_id): se reconcilia el estado por fecha y se completa lo que falta en la nota."""
-    vault, hq = raw_fields(tnote), hq_fields(task)
+def _first_link(s: Session, task: Task, tnote: Note, people: People, result: dict, root: Path, today: date, ctx: Ctx) -> VaultLink:
+    """Tarea de Liiot Hub que vino del vault (legacy_id): se reconcilia el estado por fecha y se completa lo que falta en la nota."""
+    vault, hq = raw_fields(tnote), hq_fields(task, ctx)
     updates: dict[str, object] = {}
     status = normalize("status", vault["status"], people)
     if status and status != task.status:
         if tnote.mtime > _ts(task.updated_at):
-            info = svc.apply_patch(s, task, to_patch({"status": status}, vault), ACTOR, SOURCE)
+            info = svc.apply_patch(s, task, to_patch({"status": status}, vault, task, ctx), ACTOR, SOURCE)
             result["updatedHQ"] += 1
             result["changes"].append({"taskId": task.id, "info": info, "ownerId": task.owner_id, "key": task.key})
         else:
             updates["status"] = STATUS_OUT.get(task.status, task.status)
-    for field in ("priority", "due", "start", "effort"):
+    for field in ("priority", "due", "start", "phase", "stage", "checklist"):
         if not vault[field] and hq[field]:
             out = to_vault(field, hq[field], people)
             if out:
@@ -926,16 +1065,17 @@ def _first_link(s: Session, task: Task, tnote: Note, people: People, result: dic
     if updates:
         tnote = write_note(tnote, updates, root, today)
         result["updatedVault"] += 1
-    link = VaultLink(task_id=task.id, note_id=tnote.note_id, path=tnote.rel, base_json=base_json(tnote, task), synced_at=svc.utcnow())
+    link = VaultLink(task_id=task.id, note_id=tnote.note_id, path=tnote.rel, base_json=base_json(tnote, task, ctx), synced_at=svc.utcnow())
     s.add(link)
     activity(f"{task.key} quedó vinculada con su nota de Obsidian")
     return link
 
 
-def _import_task(s: Session, tnote: Note, note_id: str, project: Project, people: People) -> Task:
+def _import_task(s: Session, tnote: Note, note_id: str, project: Project, people: People, ctx: Ctx, root: Path,
+                 today: date) -> tuple[Task, Note]:
     vault = raw_fields(tnote)
     created = _iso(_fm_str(tnote.fm, "created"))
-    status = normalize("status", vault["status"], people) or "por_hacer"
+    status = normalize("status", vault["status"], people) or "pendiente"
     data = {
         "projectId": project.id,
         "title": vault["title"][:300],
@@ -946,21 +1086,34 @@ def _import_task(s: Session, tnote: Note, note_id: str, project: Project, people
         "ownerId": normalize("owner", vault["owner"], people) or project.lead_id or people.first,
         "dueDate": normalize("due", vault["due"], people),
         "startDate": normalize("start", vault["start"], people) or created,
-        "effort": normalize("effort", vault["effort"], people) or "M",
-        "phase": vault["phase"],
         "legacyId": note_id,
         "origin": "Obsidian",
-        "blockerReason": vault["blocker"] or "Marcada como bloqueada en Obsidian",
+        "blockerReason": vault["blocker"] or "Marcada en pausa en Obsidian",
+        "checklist": [{"text": text, "done": done} for text, done in json.loads(vault["checklist"] or "[]")],
     }
+    if vault["phase"]:
+        data["phaseId"] = ctx.phase_id_for(project.id, vault["phase"])
+    stage_id = ctx.stage_id_for(project.id, vault["stage"]) if vault["stage"] else None
+    if stage_id is not None:
+        data["stageId"] = stage_id
     task = svc.create_task(s, data, ACTOR, SOURCE)
     if fold(vault["archived"]) in TRUE_WORDS:
         task.archived = True
         s.add(task)
     s.flush()
-    return task
+    # La nota recibe la fase y la etapa que le tocaron en Liiot Hub (si no las traía) y su clave
+    hq = hq_fields(task, ctx)
+    updates: dict[str, object] = {"hq": task.key} if "hq" not in tnote.fm else {}
+    for field in ("phase", "stage"):
+        if not vault[field] and hq[field]:
+            updates[VAULT_KEY[field]] = hq[field]
+    if updates:
+        tnote = write_note(tnote, updates, root, today)
+    return task, tnote
 
 
-def _export_task(s: Session, task: Task, project: Project, rel: str, people: People, used_ids: set[str], root: Path, today: date) -> VaultLink:
+def _export_task(s: Session, task: Task, project: Project, rel: str, people: People, used_ids: set[str], root: Path, today: date,
+                 ctx: Ctx) -> VaultLink:
     folder = root / rel / TASKS_DIR[0] / TASKS_DIR[1]
     folder.mkdir(parents=True, exist_ok=True)
     note_id = task.legacy_id if task.legacy_id and task.legacy_id not in used_ids else new_task_id(used_ids, today)
@@ -969,7 +1122,7 @@ def _export_task(s: Session, task: Task, project: Project, rel: str, people: Peo
     path, n = folder / f"{name}.md", 2
     while path.exists():
         path, n = folder / f"{name} ({n}).md", n + 1
-    text = task_note_text(task, note_id, project, people, today)
+    text = task_note_text(task, note_id, project, people, today, ctx)
     with open(path, "w", encoding="utf-8", newline="") as fh:
         fh.write(text)
     st = path.stat()
@@ -978,7 +1131,7 @@ def _export_task(s: Session, task: Task, project: Project, rel: str, people: Peo
     if task.legacy_id != note_id:
         task.legacy_id = note_id
         s.add(task)
-    link = VaultLink(task_id=task.id, note_id=note_id, path=tnote.rel, base_json=base_json(tnote, task), synced_at=svc.utcnow())
+    link = VaultLink(task_id=task.id, note_id=note_id, path=tnote.rel, base_json=base_json(tnote, task, ctx), synced_at=svc.utcnow())
     s.add(link)
     return link
 

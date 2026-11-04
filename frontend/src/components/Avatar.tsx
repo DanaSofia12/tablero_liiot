@@ -2,23 +2,56 @@ import type { AvatarCfg, HairStyle } from '../types'
 
 export type Mood = 'smile' | 'open' | 'flat' | 'sleep'
 
+/*
+ * Cabello en capas, siempre un poco más grande que la cabeza (círculo de radio 15.5 en 0,-46):
+ * atrás (detrás de la cabeza), adelante (casquete que baja por los lados y enmarca la cara) y mechones.
+ * Así nunca se ve piel en las sienes.
+ */
 const HAIR_BACK: Partial<Record<HairStyle, string>> = {
-  wolf: 'M-17.5,-47 C-19.5,-69 19.5,-69 17.5,-47 L18.5,-34 L21,-18 L16.5,-21 L15,-9 L10,-16 L6,-12 L0,-15 L-6,-12 L-10,-16 L-15,-9 L-16.5,-21 L-21,-18 L-18.5,-34 Z',
-  long: 'M-17.5,-47 C-19.5,-69 19.5,-69 17.5,-47 L19,-14 C10,-10 -10,-10 -19,-14 Z',
-  bowl: 'M-17.6,-45 C-19.5,-67 19.5,-67 17.6,-45 L17.4,-36 C11,-32.5 -11,-32.5 -17.4,-36 Z',
+  wolf: 'M-18.4,-48 C-20.4,-67 20.4,-67 18.4,-48 L19.8,-31 L21.6,-17 L17.4,-20 L16,-9 L11.2,-15 L6.6,-11 L0,-14 L-6.6,-11 L-11.2,-15 L-16,-9 L-17.4,-20 L-21.6,-17 L-19.8,-31 Z',
+  long: 'M-18.4,-48 C-20.4,-67 20.4,-67 18.4,-48 L19.6,-14 C10,-9.5 -10,-9.5 -19.6,-14 Z',
+  bowl: 'M-18.4,-46 C-20.4,-67 20.4,-67 18.4,-46 L18.2,-34.5 C12,-31 -12,-31 -18.2,-34.5 Z',
+  wavy: 'M-17.4,-47 C-19.4,-65 19.4,-65 17.4,-47 L16.8,-39 C10,-36.5 -10,-36.5 -16.8,-39 Z',
+  short: 'M-17.2,-47 C-19.2,-64 19.2,-64 17.2,-47 L16.6,-40 C10,-37.5 -10,-37.5 -16.6,-40 Z',
+  bun: 'M-17.2,-47 C-19.2,-64 19.2,-64 17.2,-47 L16.6,-40 C10,-37.5 -10,-37.5 -16.6,-40 Z',
 }
+
+/** Contorno de arriba: de la mandíbula izquierda, por encima de la cabeza, a la derecha. */
+const cap = (bottom: number) =>
+  `M-17.3,${bottom} C-18.7,${bottom - 6} -18.8,-53 -15.4,-59.2 C-12.1,-64.6 -6.6,-66.4 0,-66.4 C6.6,-66.4 12.1,-64.6 15.4,-59.2 C18.8,-53 18.7,${bottom - 6} 17.3,${bottom}`
 
 const HAIR_FRONT: Record<HairStyle, string> = {
-  wolf: 'M-16.2,-44 C-17.5,-63 -6,-66.5 0,-64 C6,-66.5 17.5,-63 16.2,-44 C15.5,-49 13.5,-53 9.5,-55.5 C6.5,-57.5 2.5,-57 0.6,-59.5 C-1.5,-57 -6.5,-57.5 -9.5,-55.5 C-13.5,-53 -15.5,-49 -16.2,-44 Z',
-  long: 'M-16.2,-44 C-17.5,-63 17.5,-63 16.2,-44 C14,-52 9,-56 4,-56.5 C-2,-56 -10,-55 -16.2,-44 Z',
-  bowl: 'M-17,-41 C-18.6,-65 18.6,-65 17,-41 C16.6,-45 15.6,-48.5 14,-50.2 L11,-49.2 L8.5,-50.6 L5.5,-49.4 L2.5,-50.8 L-0.5,-49.4 L-3.5,-50.8 L-6.5,-49.4 L-9.5,-50.6 L-12,-49.4 L-14,-50.2 C-15.6,-48.5 -16.6,-45 -17,-41 Z',
-  wavy: 'M-15.8,-46.5 C-17.5,-60 -10,-67.5 -1,-66 C8,-68.5 17.5,-61 15.8,-46.5 C15,-51 13,-53.5 10.5,-54 C11,-51 9,-49 7,-51.5 C6.5,-48.5 3,-48 2,-52 C0,-49 -3.5,-49.5 -4,-53 C-6,-50.5 -9.5,-51 -9.5,-54 C-12,-53 -14.5,-51 -15.8,-46.5 Z',
-  short: 'M-16,-45 C-17,-62 17,-62 16,-45 C14,-52 8,-55 0,-54.5 C-8,-55 -14,-52 -16,-45 Z',
-  bun: 'M-16,-45 C-17,-62 17,-62 16,-45 C14,-52 8,-55 0,-54.5 C-8,-55 -14,-52 -16,-45 Z',
+  // flequillo cortina abierto al centro; los lados bajan enmarcando la cara
+  wolf:
+    cap(-37.5) +
+    ' L13.5,-37.5 C13.8,-43 13.3,-47.6 11.9,-50.7 C9.9,-54.3 5.7,-55.4 1.5,-58.5 C1,-56.6 0.5,-55.7 0,-55.3 C-0.5,-55.7 -1,-56.6 -1.5,-58.5 C-5.7,-55.4 -9.9,-54.3 -11.9,-50.7 C-13.3,-47.6 -13.8,-43 -13.5,-37.5 Z',
+  // raya al medio, sin flequillo
+  long:
+    cap(-37.5) +
+    ' L13.5,-37.5 C14,-45 13.4,-51.5 10.4,-55.6 C7.6,-59.2 3.6,-60.2 1,-61 C0.6,-59.6 0.3,-59 0,-58.8 C-0.3,-59 -0.6,-59.6 -1,-61 C-3.6,-60.2 -7.6,-59.2 -10.4,-55.6 C-13.4,-51.5 -14,-45 -13.5,-37.5 Z',
+  // flequillo recto hasta las cejas
+  bowl:
+    cap(-38.5) +
+    ' L14.2,-38.5 C14.6,-43.5 14.4,-47.4 13.4,-49.8 L11,-49 L8.5,-50.3 L5.6,-49.2 L2.7,-50.4 L0,-49.3 L-2.7,-50.4 L-5.6,-49.2 L-8.5,-50.3 L-11,-49 L-13.4,-49.8 C-14.4,-47.4 -14.6,-43.5 -14.2,-38.5 Z',
+  // corto ondulado: rizos sobre la frente
+  wavy:
+    cap(-41) +
+    ' L15.2,-41 C15.4,-45.5 14.8,-49.4 13.4,-51.4 C12.4,-49.6 10.6,-49.2 9.6,-51.6 C8.6,-49 5.6,-48.6 4.6,-51.8 C3.4,-49.2 0.4,-49.4 -0.4,-52.2 C-1.8,-49.6 -4.8,-49.6 -5.6,-52.4 C-7,-50 -9.8,-50.2 -10.4,-52.6 C-11.6,-50.6 -13.4,-50.2 -14,-50.8 C-15,-48.6 -15.4,-45.2 -15.2,-41 Z',
+  // corto con flequillo de lado
+  short:
+    cap(-41.5) +
+    ' L15.3,-41.5 C15.5,-46 15,-49.6 13.8,-51.8 C11.6,-53.6 7.6,-54.6 3,-54.4 C-1.6,-54.2 -6,-52.6 -9.6,-51.4 C-12,-50.6 -14.2,-48.6 -15,-46 C-15.4,-44.6 -15.4,-43 -15.3,-41.5 Z',
+  bun:
+    cap(-41.5) +
+    ' L15.3,-41.5 C15.5,-46 15,-49.6 13.8,-51.8 C11.6,-53.6 7.6,-54.6 3,-54.4 C-1.6,-54.2 -6,-52.6 -9.6,-51.4 C-12,-50.6 -14.2,-48.6 -15,-46 C-15.4,-44.6 -15.4,-43 -15.3,-41.5 Z',
 }
 
-const STRANDS =
-  'M14.8,-50 C16.6,-42 16,-34 12.4,-27.5 C13.2,-35 12.6,-42 10.6,-49 Z M-14.8,-50 C-16.6,-42 -16,-34 -12.4,-27.5 C-13.2,-35 -12.6,-42 -10.6,-49 Z'
+/** Mechones largos que caen por delante de los hombros. */
+const LOCKS: Partial<Record<HairStyle, string>> = {
+  wolf:
+    'M17.3,-37.6 C17.9,-32 17.7,-27 16.6,-22 L15,-24.2 L13.9,-21 C14,-26.4 14,-32 13.5,-37.6 Z M-17.3,-37.6 C-17.9,-32 -17.7,-27 -16.6,-22 L-15,-24.2 L-13.9,-21 C-14,-26.4 -14,-32 -13.5,-37.6 Z',
+  long: 'M17.3,-37.6 C17.9,-31 17.8,-24 17,-17.5 C15.8,-17 14.6,-17 13.6,-17.6 C14.1,-24 14,-31 13.5,-37.6 Z M-17.3,-37.6 C-17.9,-31 -17.8,-24 -17,-17.5 C-15.8,-17 -14.6,-17 -13.6,-17.6 C-14.1,-24 -14,-31 -13.5,-37.6 Z',
+}
 
 const EDGE = 'rgba(30,14,48,.42)'
 
@@ -75,19 +108,22 @@ function Face({ a, mood }: { a: AvatarCfg; mood: Mood }) {
 
 function Head({ a, mood }: { a: AvatarCfg; mood: Mood }) {
   const back = HAIR_BACK[a.hair]
+  const locks = LOCKS[a.hair]
   return (
     <g>
-      {back && <path d={back} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} />}
-      {a.hair === 'bun' && <circle cx={0} cy={-66} r={6.5} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} />}
+      {back && <path d={back} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} strokeLinejoin="round" />}
+      {a.hair === 'bun' && <circle cx={0} cy={-67.5} r={6.6} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} />}
       <rect x={-4} y={-33} width={8} height={5} rx={2} fill={a.skin} />
+      <ellipse cx={-15.4} cy={-43.6} rx={2.2} ry={3} fill={a.skin} stroke={EDGE} strokeWidth={0.6} />
+      <ellipse cx={15.4} cy={-43.6} rx={2.2} ry={3} fill={a.skin} stroke={EDGE} strokeWidth={0.6} />
       <circle cx={0} cy={-46} r={15.5} fill={a.skin} stroke={EDGE} strokeWidth={0.8} />
       <Face a={a} mood={mood} />
-      <path d={HAIR_FRONT[a.hair]} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} />
-      {a.hair === 'wolf' && <path d={STRANDS} fill={a.hairColor} />}
+      <path d={HAIR_FRONT[a.hair]} fill={a.hairColor} stroke={EDGE} strokeWidth={0.8} strokeLinejoin="round" />
+      {locks && <path d={locks} fill={a.hairColor} stroke={EDGE} strokeWidth={0.7} strokeLinejoin="round" />}
+      <path d="M-10.5,-61.4 q6,-3.6 13.5,-2.4" fill="none" stroke="rgba(255,255,255,.2)" strokeWidth={1.4} strokeLinecap="round" />
       {a.hair === 'wavy' && (
-        <path d="M-9,-60.5 q4,-3 8,-0.5 M2,-62 q4,-2 7,0.5" fill="none" stroke="rgba(255,255,255,.18)" strokeWidth={1.2} strokeLinecap="round" />
+        <path d="M-9,-60 q4,-3 8,-0.5 M2,-61.6 q4,-2 7,0.5" fill="none" stroke="rgba(255,255,255,.18)" strokeWidth={1.2} strokeLinecap="round" />
       )}
-      <path d="M-11,-58 q6,-5 14,-3" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth={1.4} strokeLinecap="round" />
     </g>
   )
 }

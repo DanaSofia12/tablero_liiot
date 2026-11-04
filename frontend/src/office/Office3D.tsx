@@ -5,12 +5,11 @@ import { Bloom, EffectComposer, Noise, Pixelation, Vignette } from '@react-three
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { ACTIVITY_ICON, PRESENCE_META } from '../components/bits'
-import type { Member, Presence } from '../types'
+import type { Member, Presence, Theme } from '../types'
 import { anchors, bubbleEls } from './anchors'
 import { Avatar3D } from './Avatar3D'
 import { paletteFor } from './palette'
 import { Room, type RoomData } from './Room'
-import type { Universe } from '../prefs'
 
 const CENTER = new THREE.Vector3(6, 0.6, 4.5)
 const tmp = new THREE.Vector3()
@@ -38,7 +37,7 @@ function Bubble({ member, presence, onSelect }: { member: Member; presence?: Pre
   const state = presence?.state ?? 'disponible'
   const meta = PRESENCE_META[state]
   const Icon = state === 'trabajando' ? ACTIVITY_ICON[presence?.task?.type ?? ''] ?? meta.icon : meta.icon
-  const label = state === 'trabajando' ? presence?.activity || meta.label : meta.label
+  const what = state === 'trabajando' ? presence?.task?.title ?? presence?.note ?? '' : ''
   return (
     <div
       className="bubble-anchor"
@@ -47,10 +46,10 @@ function Bubble({ member, presence, onSelect }: { member: Member; presence?: Pre
         else bubbleEls.delete(member.id)
       }}
     >
-      <button type="button" className="bubble" style={{ ['--bc' as string]: meta.color }} onClick={onSelect} title={`${member.name} · ${meta.label}`}>
+      <button type="button" className={`bubble s-${state}`} style={{ ['--bc' as string]: meta.color }} onClick={onSelect} title={`${member.name} · ${meta.label}${what ? ` · ${what}` : ''}`}>
         <Icon aria-hidden />
-        <b>{label}</b>
-        {presence?.task && <span>{presence.task.key}</span>}
+        <b>{meta.label}</b>
+        {what && <span>{what}</span>}
         <em className="who">{member.name}</em>
       </button>
     </div>
@@ -68,7 +67,23 @@ function FitZoom() {
   return null
 }
 
-function Lights({ night, sun, sunColor, ambient, hemiSky, hemiGround }: { night: boolean; sun: number; sunColor: string; ambient: number; hemiSky: string; hemiGround: string }) {
+function Lights({
+  night,
+  sun,
+  sunColor,
+  ambient,
+  hemiSky,
+  hemiGround,
+  lamp,
+}: {
+  night: boolean
+  sun: number
+  sunColor: string
+  ambient: number
+  hemiSky: string
+  hemiGround: string
+  lamp: string
+}) {
   const target = useMemo(() => {
     const o = new THREE.Object3D()
     o.position.copy(CENTER)
@@ -95,7 +110,7 @@ function Lights({ night, sun, sunColor, ambient, hemiSky, hemiGround }: { night:
         shadow-bias={-0.0005}
         shadow-normalBias={0.02}
       />
-      {night && <pointLight position={[6, 3, 5]} intensity={6} distance={14} color="#b58cff" />}
+      {night && <pointLight position={[6, 3, 5]} intensity={6} distance={14} color={lamp} />}
     </>
   )
 }
@@ -114,18 +129,18 @@ export interface Office3DProps {
   members: Member[]
   presence: Presence[]
   data: RoomData
-  uni: Universe
+  theme: Theme
   mode: 'dark' | 'light'
   pixel: boolean
   calm: boolean
-  go: (path: string) => void
-  toggleUniverse: () => void
+  go: (sub: string) => void
+  goHome: () => void
   onSelectMember: (id: string) => void
   onHint: (label: string | null) => void
 }
 
-export default function Office3D({ members, presence, data, uni, mode, pixel, calm, go, toggleUniverse, onSelectMember, onHint }: Office3DProps) {
-  const pal = paletteFor(uni, mode)
+export default function Office3D({ members, presence, data, theme, mode, pixel, calm, go, goHome, onSelectMember, onHint }: Office3DProps) {
+  const pal = paletteFor(theme, mode)
   const effects = [
     <Bloom key="bloom" mipmapBlur intensity={pal.night ? 0.95 : 0.45} luminanceThreshold={pal.night ? 0.5 : 0.82} luminanceSmoothing={0.2} />,
     <Noise key="noise" premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={calm ? 0.12 : pal.night ? 0.32 : 0.16} />,
@@ -144,7 +159,7 @@ export default function Office3D({ members, presence, data, uni, mode, pixel, ca
           enableDamping
           dampingFactor={0.08}
           minZoom={18}
-          maxZoom={120}
+          maxZoom={240}
           minPolarAngle={0.62}
           maxPolarAngle={1.18}
           minAzimuthAngle={Math.PI / 4 - 0.55}
@@ -152,7 +167,7 @@ export default function Office3D({ members, presence, data, uni, mode, pixel, ca
           enablePan
           panSpeed={0.6}
         />
-        <Lights night={pal.night} sun={pal.sun} sunColor={pal.sunColor} ambient={pal.ambient} hemiSky={pal.hemiSky} hemiGround={pal.hemiGround} />
+        <Lights night={pal.night} sun={pal.sun} sunColor={pal.sunColor} ambient={pal.ambient} hemiSky={pal.hemiSky} hemiGround={pal.hemiGround} lamp={pal.lamp} />
         <Suspense fallback={null}>
           <Environment resolution={128} frames={1}>
             <Lightformer form="rect" intensity={2.5} color={pal.neonA} position={[8, 4, 6]} scale={[8, 3, 1]} />
@@ -160,7 +175,7 @@ export default function Office3D({ members, presence, data, uni, mode, pixel, ca
             <Lightformer form="ring" intensity={3} color="#ffffff" position={[0, 8, 0]} scale={4} />
           </Environment>
         </Suspense>
-        <Room pal={pal} bleepy={uni === 'bleepy'} data={data} go={go} toggleUniverse={toggleUniverse} onHint={onHint} />
+        <Room pal={pal} bleepy={theme === 'bleepy'} data={data} go={go} goHome={goHome} onHint={onHint} />
         {members.map((m) => (
           <Avatar3D key={m.id} member={m} presence={presence.find((p) => p.memberId === m.id)} onSelect={() => onSelectMember(m.id)} onHint={onHint} />
         ))}

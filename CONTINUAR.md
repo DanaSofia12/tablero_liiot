@@ -1,14 +1,14 @@
-# Continuar Liiot HQ
+# Continuar Liiot Hub
 
-Documento para retomar el trabajo en otra sesión sin perder nada de lo planteado. Estado al **27 de octubre de 2026**.
+Documento para retomar el trabajo en otra sesión sin perder nada. Estado al **3 de noviembre de 2026**. Antes se llamaba Liiot HQ (la carpeta, las variables `HQ_*` y las preferencias `hq.*` conservan ese nombre).
 
-- Plano original (arquitectura de información, bocetos, stack, fases y preguntas): https://claude.ai/artifact/AU38zGzv8MZrwCziqZyGSi
 - Código: `C:\Users\dana\dev\liiot-hq` (a propósito fuera de Google Drive: `node_modules` no debe sincronizarse).
-- Cómo abrirlo y configurar el bot: `README.md`.
+- Cómo abrirlo, cuentas, bot y Obsidian: `README.md`.
+- Repositorio: https://github.com/DanaSofia12/tablero_liiot (público, ver §2).
 
 ## 1. El encargo
 
-Dana (CEO de Liiot) pidió un espacio de trabajo interno y gamificado, **Liiot HQ**, para el equipo de tres:
+Dana (CEO de Liiot) pidió un espacio de trabajo interno para el equipo de tres:
 
 | Persona | Rol |
 |---|---|
@@ -16,153 +16,141 @@ Dana (CEO de Liiot) pidió un espacio de trabajo interno y gamificado, **Liiot H
 | Juan David | CCO: ventas, modelo de negocio, ideas |
 | Jean Pierre | CTO: arquitectura y desarrollo |
 
-Requisitos de la primera ronda:
+Rondas anteriores (oct-2026): tareas con responsable, fechas, prioridad, estado y tipo; mundos por proyecto con rúbricas; oficina 3D isométrica con avatares chibi de los tres; bot de Telegram en dos vías; estética «aurora» del brandbook de Liiot; todo local y gratis; sincronización en dos vías con Obsidian; varios proyectos; código en GitHub.
 
-- Tareas con fechas, responsable, resumen, prioridad, estado y tipo (marketing, desarrollo, negocio, etc.).
-- «Mundos» por proyecto con rúbricas de lanzamiento configurables (checks, etapas, decisión de lanzar o no).
-- Panel de carga: quién lleva más, cuántas tiene, qué hace y qué le falta. Vista personal por persona que igual puede ver todo.
-- Bot de Telegram en dos vías: seguimiento proactivo de vencimientos y bloqueos; las respuestas actualizan la base; avisos periódicos y de bloqueos a Dana como CEO.
-- Tema por proyecto (Bleepy = «universo creativo»).
-- Oficina 3D isométrica (como el video «Equipo de agentes de IA que trabaja para mi negocio») con avatares personalizables de los tres fundadores. **No estilo Lego**: estilo chibi anime/pixel como la segunda referencia, con sus rasgos reales, y que reaccionen en tiempo real al estado de sus tareas.
-- Colores y logo del brandbook de Liiot; modo claro u oscuro con la estética de las referencias.
+**Cuarta ronda (3-nov, manda sobre las anteriores):**
 
-Directivas de la segunda ronda (mandan sobre el plano):
+- Nombre más bonito que HQ → **Liiot Hub**.
+- **Ingreso independiente y seguro**: correo, usuario y contraseña por persona, y la posibilidad de registrar personas nuevas.
+- Al entrar, **Liiot la empresa** con los proyectos como **carpetas**; abrir una es «entrar a un mundo» con animación. Bleepy usa su brandbook (`C:\Users\dana\Downloads\Brandbook_bleepy.pdf`); los demás, el de Liiot. Lo demás igual.
+- **Oficina**: quitar «Necesita atención» y las tarjetas de abajo; solo ver en qué está cada quien. Estados únicos: **Trabajando, En reunión, Disponible, Descansando**. El bot pregunta cada día «¿en qué trabajas hoy?» y su respuesta actualiza la oficina; fuera del horario del perfil, Descansando.
+- **Mi espacio**: calendario propio y tareas de hoy; quitar «Todas mis tareas», «El equipo», nivel/XP, «Esperan por ti» y «Tarea para Dana»; «Mi foco hoy» → «Mis pendientes»; casillas más bonitas; solo lo propio.
+- **Sin textos de ayuda bajo los títulos** en ninguna vista. Estados de tarea: **Pendientes, En progreso, En pausa, Pruebas, Finalizadas**.
+- **Prioridades** con nombre y color (Baja, Media, Alta, Crítica); **descripción obligatoria**; quitar **esfuerzo**.
+- **Checklist** (subtareas) con avance dentro de cada tarea.
+- «Lanzamiento» → **Fases** del proyecto (validación, piloto, lanzamiento…), cada una con etapas, tareas, mínimos para pasar y rúbrica opcional y editable; validar y avanzar ordenadamente.
+- **Cronograma**: exportar a Excel, filtrar por fechas, fases o etapas, por mes por defecto; sin «fase según Obsidian» ni códigos de rúbrica; Obsidian debe mostrar lo mismo que el sistema.
+- **Equipo**: sin carga en puntos ni porcentajes; análisis claro (asignaciones por mes, fechas que se cruzan, días cargados, atrasadas, hechas, pendientes) y una gráfica de avance; quitar «Qué vence cada día» e «Ideas para repartir».
+- **Seguimiento**: tarjetas ordenadas; bot de grupo con avisos generales (cuenta regresiva, atrasadas, tareas nuevas, entregas) y bot personal («¿qué haces hoy?», tareas por vencer), en lenguaje humano, sin abreviaturas ni claves, con respuestas por botones.
+- Diseño sin espacios sobrantes; **avatares 3D más bonitos y animados** (Dana se veía «medio calva» de los lados).
 
-- Diseño **menos plano**, con la estética de la imagen 3 (póster de cromo líquido morado-naranja con grano) y el tablero de Pinterest `pin.it/434TJ6atR` (co.pinterest.com/Dino_Sofia/liiot): fondos oscuros, cintas de luz violeta → magenta → naranja → ámbar, grano, cromo líquido, números con contorno brillante.
-- **Solo las tareas de Bleepy.** Ningún otro proyecto por ahora.
-- **Las personas externas no entran** (por ejemplo Saray): ni usuarios, ni avatares, ni bot.
-- Telegram: **un grupo del equipo y chats privados**. Ritual semanal **todos los sábados a las 6:00 p. m., configurable**.
-- **Sin despliegue: todo local.** Más adelante quizá una intranet.
-- **No gastar dinero.**
-- Construir de una vez la mayor parte; lo que falte, dejarlo listo para otra sesión (este documento).
-- **No es un proyecto del vault**: es una herramienta de Dana. No registrarlo en `10_Proyectos` ni escribir ADR.
-- Dana compartió fotos de los tres para los avatares.
+**Quinta ronda (3-nov, tarde; con capturas y dos imágenes de referencia):**
 
-Tercera ronda (27-oct, manda sobre las anteriores):
+- **Tarjetas simétricas y alineadas**, sin espacios innecesarios; «visualmente atractivo pero sin ruido visual y tampoco básico».
+- **Carpetas del inicio** al estilo de un escritorio de archivos (carpetas con pestaña, hojas que se asoman y ventanas de computador viejo), con los **colores de Liiot**.
+- **La oficina también en Liiot general**, y la oficina **con los estados del equipo al lado**, como antes.
+- **Bleepy menos oscuro**: azul cobalto con naranja y crema, grano y tarjetas tipo widget (referencia: una pantalla de iPad con widgets azules y naranja).
+- **Equipo** sin tarjetas generales vacías arriba: más diseño, más dinámico.
+- **Rúbrica**: los grupos (el acordeón) cerrados por defecto.
+- Pregunta: «si actualizo el sistema, ¿me actualiza el Obsidian?» → sí (ver README §Obsidian).
 
-- Cambiar el estado de las tareas tiene que funcionar siempre (antes fallaba en silencio cuando HQ estaba apagado).
-- **Conectado a Obsidian en las dos direcciones**: lo que se crea o cambia en HQ aparece en el vault y viceversa.
-- **Varios proyectos**: poder crear proyectos distintos a Bleepy y ponerles tareas. Con la sincronización, SST y Landing Page del vault también aparecen.
-- Mejor experiencia: que se entienda cómo crear tareas y cambiar su estado.
-- Explicar paso a paso cómo activar Telegram.
-- Subir el código a GitHub (Dana creó `DanaSofia12/tablero_liiot`).
+**Sexta ronda (3-nov, noche; con dos imágenes de degradados con grano):** Bleepy «que tampoco sea tan llamativo»: dejar el azul oscuro de fondo, con la estética de Liiot, que solo resalten ciertas cosas, en oscuro y en claro, sin el azul súper potente.
 
 ## 2. Reglas que no se negocian
 
-1. Local y gratis: nada de Railway, dominios, IA de pago ni servicios con costo (las opciones para salir de lo local están en §5).
-2. Proyectos: los de `10_Proyectos` del vault más los que se creen en HQ. Para Bleepy se dice **piloto**, no «demo» ni «beta» (piloto 15-nov, respaldo 1-dic).
-3. Solo los tres fundadores.
-4. El token de Telegram vive solo en `.env` (ignorado por git) y nunca sale por la API.
-5. Commit y push solo cuando Dana lo pida. Repositorio: https://github.com/DanaSofia12/tablero_liiot, **público** (Dana lo confirmó el 27-oct sabiendo que se ven los nombres del equipo y los datos de Bleepy). Nunca subir secretos: `.env` y `backend/data/` quedan fuera de git.
-6. El vault solo lo toca la sincronización de HQ, y así: frontmatter de las notas de `10_Proyectos/*/01_Gestion/Tareas` y de las notas de proyecto, más las notas y carpetas nuevas que se creen desde HQ. Nunca el cuerpo de una nota existente y nunca borrar archivos.
-7. No iniciar sesión en Pinterest ni en otros sitios.
+1. Local y gratis: nada de servicios con costo ni IA de pago. No desplegar sin que Dana lo pida (las opciones están en §5).
+2. Proyectos: los de `10_Proyectos` del vault más los que se creen en Liiot Hub. Para Bleepy se dice **piloto** (15-nov, respaldo 1-dic).
+3. Solo los tres fundadores tienen cuenta hoy. Las personas externas (por ejemplo Saray) no entran salvo que Dana las registre.
+4. El token de Telegram vive solo en `.env` (ignorado por git) y nunca sale por la API. El enlace personal de Telegram de cada persona solo lo ve su dueño o quien administra.
+5. Commit y push solo cuando Dana lo pida. El repositorio es **público** por decisión de Dana (27-oct). Nunca subir `.env` ni `backend/data/` (base, respaldos).
+6. El vault solo lo toca la sincronización: frontmatter de las notas de `10_Proyectos/*/01_Gestion/Tareas` y de las notas de proyecto, más las notas y carpetas nuevas que se creen desde Liiot Hub. Nunca el cuerpo de una nota existente, nunca borrar archivos y nunca los `.base`.
+7. Probar siempre sobre copias (`HQ_DB_PATH` y `HQ_VAULT_PATH` apuntando a copias, `TELEGRAM_BOT_TOKEN=" "` para no encender el bot). En las pruebas automáticas, `HQ_VAULT_PATH=off`.
+8. No iniciar sesión en sitios externos ni escribir contraseñas reales. Las cuentas de prueba solo en bases de prueba.
+9. Responder en español y con lenguaje neutro al hablar de las personas.
 
-## 3. Qué ya funciona
+## 3. Qué ya funciona (verificado el 3-nov)
 
-Verificado el 27-oct: pruebas del backend (5/5, una de ellas sincroniza con una bóveda temporal), compilación con TypeScript estricto y revisión en el navegador con copias de la base y del vault.
+Pruebas del servidor 10/10, TypeScript estricto y compilación sin errores, ensayo de la actualización sobre copias de la base y del vault, y recorrido en el navegador (copias, puerto 8010, sin bot) de inicio, transición, oficina, tareas, ficha con checklist, fases y rúbrica, Mi espacio, cronograma, equipo, seguimiento, ajustes y modo claro de Bleepy. La quinta ronda (solo interfaz, sin cambios en el servidor) se revisó con copias en Liiot y Bleepy, oscuro y claro, a 1880, 1600 y 1280 px.
 
-- **Sincronización con Obsidian** (`backend/app/vault.py`): revisa el vault cada 15 s y, tras cada cambio en HQ, en 1 a 2 s. Hace una fusión en tres vías por campo, guardando en `VaultLink.base_json` lo último sincronizado de cada lado; gana el lado que cambió y, si cambiaron ambos, el más reciente. Los campos están en el README. Reconoce a las personas por cómo aparecen en el vault («Jean Pierre Ortiz Murcia», «David Ocaño», «Dana»); «El grupo» o personas externas quedan a cargo del líder del proyecto en HQ, sin reescribir la nota. Si falta una nota dos revisiones seguidas, archiva la tarea, salvo que falten muchas a la vez: ahí no archiva nada, por si Google Drive está sincronizando. Ensayo sobre copias: la primera pasada importó SST (49) y Landing Page, creó 9 notas de Bleepy y completó campos en 14; la segunda pasada no cambió nada.
-- **Varios proyectos**: selector arriba a la izquierda y «Nuevo proyecto» (prefijo de claves, líder, fecha, color y rúbrica básica opcional). Un proyecto nuevo crea su carpeta en `10_Proyectos` con la plantilla del vault. Tareas, Lanzar y Cronograma son del proyecto elegido; Mi espacio, Equipo y el bot suman todos los proyectos. El resumen semanal del grupo manda un mensaje por proyecto con tareas abiertas.
-- **Tareas más claras**: selector de estado en cada tarjeta y en la lista, «Agregar tarea» al final de cada columna, guía de 4 pasos (se puede ocultar), estado vacío para proyectos nuevos, formulario con «¿Qué hay que hacer? / ¿Quién? / ¿Para cuándo?» y atajos de fecha, tablero que cabe en pantallas medianas, aviso rojo si HQ se desconecta y mensaje claro si un cambio no se guarda.
-- **Telegram desde la app**: en Seguimiento se pega el token de BotFather y HQ lo valida, lo guarda en `.env` y reinicia el bot sin cerrar HQ. También se puede desconectar.
-- **Bot conversacional y amable** (27-oct): `backend/app/chat.py` entiende frases normales sin IA de pago (intenciones por reglas, fechas en palabras, búsqueda de la tarea por clave o por palabras del título con `difflib`; si hay varias parecidas, pregunta cuál). `bot.py` habla con frases cortas y cálidas, sin jerga (prioridad en palabras, estados como «en curso»), con teclado de accesos rápidos y botón «Deshacer» al marcar hecha. Lenguaje neutro al dirigirse a las personas.
-- **Equipo más claro**: cada tarjeta dice la carga en palabras («Tiene espacio», «Va al límite», «Más de lo que cabe»), tres números (abiertas, vencidas, hechas esta semana), avisos como chips y «Ahora / Después» en una línea. Selector «Todos los proyectos / Solo este».
-- **Regla de carga corregida**: cuenta lo que vence en 14 días, lo vencido y lo que está en marcha; lo que espera sin fecha (backlog de SST) ya no infla el porcentaje (Jean Pierre pasó de 970 % a 190 %) y se muestra aparte como «sin fecha».
-- **Otra instalación no duplica**: si una nota trae `hq: CLAVE` y el mismo título que una tarea sin vincular, se vincula en vez de importarse (probado con una base nueva contra una copia del vault: 0 notas nuevas, 0 duplicados).
-
-- **Backend** (FastAPI + SQLModel + SQLite en modo WAL): API completa en `/api`, WebSocket `/ws` para tiempo real y la interfaz compilada servida por el mismo proceso. `index.html` va con `no-cache` y `assets/` con caché larga.
-- **Datos sembrados desde el vault**: 23 tareas (14 del vault `TSK-20261013-01..14` con sus estados y dueños reales, más 9 del cronograma), 5 etapas (15-19 oct, 20-26 oct, 27 oct-2 nov, 3-9 nov, piloto 10-15 nov), rúbrica de 8 categorías y 30 criterios (18 bloqueantes). La tarea de logo que tenía Saray quedó a cargo de Jean Pierre.
-- **Páginas**: Oficina 3D, Mi espacio (`?persona=`), Tareas (tablero con arrastrar y soltar, lista, filtros, ficha con bitácora), Lanzar (etapas editables, rúbrica, veredicto y revisiones), Cronograma (gantt con hitos), Equipo (carga, entregas por día, sugerencias de reparto), Seguimiento (configuración del bot y del ritual, enlaces de vinculación, mensajes recientes) y Ajustes (editor de avatar, apariencia, «¿quién usa este navegador?», exportar JSON).
-- **Diseño «aurora»**: tokens para oscuro, claro y universo Bleepy; cintas de luz difuminadas, grano SVG, orbe cromado, bordes en degradado y números con contorno.
-- **Oficina 3D** (react-three-fiber): cámara isométrica ortográfica, sala con escritorios, tablero, pantalla, calendario, ventana, letrero, portal (cambia de universo), café, mesa de reuniones, sofá, estantería, escultura cromada (cohete en el universo Bleepy) y cintas de neón. Postprocesado con bloom, grano, viñeta y modo pixel. Avatares chibi procedurales con material toon, que caminan por rutas y cambian de pose según su estado. Burbujas HTML sobre cada cabeza (capa propia, ver §6) y ayuda al pasar el mouse por cada objeto.
-- **Presencia**: manual (reunión, foco, disponible, fuera) > fuera de horario > bloqueado > celebrando (tarea hecha hace menos de 10 min) > trabajando > revisión > disponible.
-- **Bot de Telegram** (python-telegram-bot 22, long polling en el mismo proceso):
-  - Vinculación con `/start <código>` (enlace profundo) y `/vincular_grupo` en el grupo. Solo responde a cuentas vinculadas.
-  - Comandos: `/hoy`, `/semana`, `/pendientes`, `/estado`, `/nueva`, `/equipo`, `/resumen`, `/silencio` y `/ayuda`.
-  - Botones en cada tarea: va bien, hecha, en curso, bloqueada (pregunta el motivo y a quién se espera), nueva fecha y comentar. Todo actualiza HQ al instante.
-  - Avisos: bloqueo a Dana y a quien puede desbloquear, desbloqueo, celebraciones en el grupo, reprogramaciones y reasignaciones.
-  - Recordatorio diario de vencimientos a las 9:00 (configurable): lo que vence hoy o mañana y lo que venció ayer; máximo 3 por persona, sin repetir en el día y respetando `/silencio`.
-  - Ritual semanal (sábado 18:00): resumen al grupo, preguntas por privado de las tareas principales de cada persona y resumen de CEO a Dana. Se puede correr a mano desde Seguimiento.
-  - **Nunca se probó contra Telegram real: falta el token.**
-- **Arranque**: `iniciar.cmd` / `iniciar.ps1` (crea el entorno, instala, compila solo si hay cambios, abre el navegador; opciones `-Puerto`, `-Red`, `-SinNavegador`, `-Compilar`) y `desarrollo.ps1` (recarga automática en :8000 y Vite en :5173). Los `.ps1` van en UTF-8 con BOM para que Windows PowerShell 5.1 lea bien las tildes.
-- **Docker**: `Dockerfile` en dos etapas y `docker-compose.yml` (solo 127.0.0.1, volumen `hq-data`, `.env` opcional). La sintaxis se validó con `docker compose config`; **la imagen no se construyó** porque Docker Desktop estaba apagado.
+- **Cuentas** (`auth.py`, `api_auth.py`): scrypt con sal; sesión en cookie HttpOnly (token aleatorio; en la base solo su SHA-256), 30 días renovables; límite de intentos (8 en 15 min por IP y por usuario); todo `/api` exige sesión salvo `/api/health` y `/api/auth/*`; el WebSocket también; los cambios (POST/PATCH/DELETE) exigen el encabezado `X-Liiot: 1` que pone la interfaz. Primera cuenta con el código que imprime la ventana; invitaciones y recuperación con códigos de un solo uso (8 caracteres sin letras confusas, se guarda su huella); `recuperar-acceso.cmd` para quien administra.
+- **Mundos**: rutas `/` (Liiot), `/yo`, `/equipo`, `/seguimiento`, `/ajustes` y `/p/<proyecto>/…` (oficina, tareas, fases, cronograma y las mismas secciones compartidas). `Project.theme` = `bleepy` o `liiot`; `world.tsx` pone `data-uni` en `<html>`. Transición de carpeta (`WorldTransition.tsx`): la carpeta crece desde su rectángulo hasta llenar la pantalla con el cielo de la marca, logo y nombre; se omite con «Menos movimiento».
+- **Estilo Bleepy** desde el brandbook: naranja `#F36F2B`, azul `#3061AD`/`#658DB9`, crema `#E2E5B2`, noche `#231F20`; Groka → Unbounded en mayúsculas, Times New Roman en subtítulos, Figtree para el texto; logo vectorial extraído del PDF (`components/brandPaths.ts`, `public/brands/bleepy.svg`). Desde la sexta ronda tiene **la estética de Liiot con colores de Bleepy**: en oscuro, fondo azul noche (`#0f1a3d`) con vidrio, grano y remolinos «gradient map» (amarillo → naranja → rojo → azul) en las esquinas; en claro, papel crema (`#efe9cf`) con los mismos remolinos. Solo resalta lo importante: botones y avances con el degradado, números de las cabeceras, halo naranja y azul en los títulos, y una estrella de Bleepy difuminada en «gradient map» en los encabezados de Mi espacio y Fases (`ThermalStar` en `Brand.tsx`). Sobre naranja el texto va en azul noche (`--on-acc`). La oficina 3D de Bleepy es de noche en azul (luces cálidas, sillas y sofá naranja) y crema en claro.
+- **Diseño (quinta ronda)**: inicio con ventanas de computador viejo («En la oficina», «Mis proyectos», «Próximas fechas»), carpetas pastel con pestaña y hojas que se asoman (colores de Liiot; Bleepy en celeste con su cometa), boletos de fechas de las próximas tres semanas; **oficina de Liiot** en `/oficina` y, en todas las oficinas, el panel «El equipo ahora» al lado (estado, en qué trabaja, qué le vence hoy, tu estado); **Equipo** con anillo «al día» + gráfica en una sola tarjeta y, por persona, banda de color, avatar, reparto de tareas, próximos 14 días (clic en un día muestra sus tareas; línea amarilla = fechas que se cruzan), tareas por mes y alertas; tarjetas de igual altura en Mi espacio (con «Lo que viene»), Seguimiento (conexión en una franja, tres columnas, ejemplos del bot abajo), Fases (el botón de avanzar queda abajo) y Ajustes; la rúbrica abre con los grupos cerrados (cada uno muestra candados pendientes y avance).
+- **Estados y prioridades**: claves `pendiente`, `en_progreso`, `en_pausa`, `pruebas`, `finalizada` (los nombres viejos se aceptan y se migraron); prioridades P0–P3 por dentro, con nombre y color por fuera.
+- **Checklist**: `Task.checklist_json` (id, texto, hecho); el avance es parte del API (`progress`), del Excel y del frontmatter.
+- **Fases** (`phases.py`): `Phase` (clave para Obsidian, objetivo, fechas, estado, rúbrica sí/no, umbral, validación) y `PhaseCheck` (mínimos). Etapas, criterios y revisiones cuelgan de la fase. Avanzar exige los mínimos y los indispensables de la rúbrica, o una nota para forzar. La migración creó «Piloto de validación» para Bleepy y Preinicio + Fase 1-4 para SST.
+- **Presencia**: `Member.presence_state/note/task_id/at` y `work_days`; regla en `services.presence_of` (§4).
+- **Bot**: pregunta diaria (revisión cada 5 min, al empezar el horario de cada quien, una vez al día y no si ya contó su estado); avisos de grupo configurables (`groupNewTasks`, `groupCelebrations`, `groupTesting`, `groupCountdown` a 30/21/14/10/7/5/3/2/1/0 días, `groupOverdue` L-V, `groupPhases`, `groupBlockers`, `groupWeeklySummary`, hora `groupTime`); crear una tarea pide la descripción; entiende «estoy en reunión», «hoy trabajo en…», «terminé por hoy», «ya estoy libre», «pausa…», «lista para pruebas». Los mensajes no muestran claves. Todo lo que envía queda en Seguimiento (chat del equipo o personal). **No se ha probado contra Telegram real en esta ronda.**
+- **Obsidian**: mapeo nuevo en `vault.py` (§4 del README); campos nuevos se completan sin pisar (fusión con «campo nuevo» cuando no está en la base); respaldo único de las notas antes del primer cambio (`Setting vault_backup_v2`).
+- **Ensayo con copias reales (3-nov)**: 25 notas de Bleepy reciben `fase` y `etapa` (solo encabezado); 0 cuerpos cambiados, 0 notas nuevas, segunda pasada sin cambios; SST conserva sus `fase_*`.
+- **Excel** (`export_xlsx.py`): hojas Cronograma (tabla con filtros), Diagrama (barras por días o por semanas si son más de 92 días, hitos y hoy) y Resumen (por persona y por fase).
+- **Equipo** (`analytics.py`): por persona, pendientes/en progreso/en pausa/pruebas/atrasadas/finalizadas del mes, tareas por mes (6 meses), cruces de fechas (≥ 3 abiertas a la vez en los próximos 45 días), días con ≥ 3 entregas, atrasadas y puntualidad (solo tareas finalizadas dentro de la app). Gráfica «Cómo avanzamos» (debían estar listas vs finalizadas, acumulado por semana) con colores validados para daltonismo y contraste.
 
 ## 4. Decisiones tomadas
 
 | Tema | Decisión | Por qué |
 |---|---|---|
-| Stack | FastAPI + SQLModel + SQLite; bot en el mismo proceso; React 19 + Vite 6 + TypeScript + TanStack Query; R3F 9 + drei 10 + postprocessing; CSS propio con tokens, sin Tailwind | Un solo proceso, sin servicios extra: respeta el espíritu del ADR de baja infraestructura |
-| Login | No hay. El «¿quién eres?» se guarda en el navegador | Es local, en un PC |
-| Fuente de verdad | Las tareas de Bleepy viven en HQ (sembradas una vez desde el vault); no se sincroniza de vuelta | Editar en dos lados exigiría sincronizar en dos vías |
-| Carga | Puntos (S = 1, M = 2, L = 3) de tareas abiertas que vencen en 14 días ÷ capacidad. Verde < 70 %, amarillo ≤ 100 %, rosa > 100 % | Simple y explicable |
-| Veredicto | Lanzar si cumplen todos los bloqueantes y ≥ 80 % del resto; lanzar con riesgo o no lanzar en los demás casos | Igual a la regla de la rúbrica del vault |
-| Avatares | Chibis procedurales (SVG en 2D y toon en 3D) con rasgos de las fotos, editables en Ajustes. VRM queda para después | Sin costo ni archivos externos |
-| Mapeo de fotos | **Tentativo, falta confirmar**: foto de pelo negro largo con flequillo y collares = Dana; gafas redondas y chaqueta de jean = Jean Pierre; pelo corto ondulado y sobrecamisa negra = Juan David | Deducido de las fotos |
-| Bleepy | Paleta provisional «planeta creativo» (cian, violeta, rosa, amarillo) | La identidad de Saray no ha llegado |
-| Telegram | Long polling, mensajes en HTML, máximo 3 proactivos al día, sábado 18:00 configurable | Sin dominio ni servidor público |
-
-**Cambios frente al plano original**: no hay Railway, Litestream ni login con Google (local y gratis); el 3D se construyó ya y no después del piloto, porque Dana pidió hacer la mayor parte de una vez; no se escribió el ADR porque HQ no se registra en el vault; las personas externas no aparecen ni como visitantes.
+| Nombre | Liiot Hub | Dana pidió algo más bonito que HQ; «Hub» = el centro de la empresa. Se cambia en `catalog.APP_NAME` y `api.APP_NAME` |
+| Cuentas | Propias (scrypt + cookie), sin servicios externos | Local y gratis; listas para una intranet |
+| Primera cuenta | Código impreso en la ventana del programa | Solo quien abre Liiot Hub en ese PC puede crearla |
+| Registro | Por invitación (código) desde Personas y accesos | «Registrar personas nuevas» sin dejar el registro abierto |
+| Estados en Obsidian | Pendiente = `por_hacer` y Finalizada = `hecho` (como la plantilla `Entity_Tarea` y los `.base`); `en_pausa` y `pruebas` nuevos | No romper los tableros de Obsidian, que el agente no puede editar |
+| Fase y etapa en Obsidian | `fase` = clave de la fase (`fase_1`, `piloto_de_validacion`), `etapa` = nombre | SST ya usaba `fase_*` y su Base agrupa por eso |
+| Presencia | Dentro del horario: lo elegido hoy, si no Disponible. Fuera: Descansando, salvo un estado elegido hace < 3 h | Lo pidió Dana; lo de las 3 h cubre quedarse trabajando un rato |
+| Carga | Sin puntos ni porcentajes: conteos y fechas | Dana dijo que no se entendía |
+| Gráficas | Emphasis (finalizadas en el acento, planeado en gris); validadas con el validador de la guía de visualización | Una sola idea por gráfica, legible para daltonismo |
+| Fuentes Bleepy | Unbounded + Times New Roman + Figtree | Groka y Creato Display no son libres; se eligió lo más parecido sin descargar fuentes |
+| Avatares | Chibis procedurales; cabello en capas (casquete, manto con ventana para la cara, sienes, flequillo y pelo largo) | Arregla las sienes sin pelo; sin archivos externos |
+| Bleepy | Oscuro = azul noche (como la estética de Liiot), claro = papel crema; el color fuerte solo en acentos «gradient map» | 1.ª versión casi negra («muy oscuro»); 2.ª cobalto vivo («tan llamativo», «azul súper potente»); la 3.ª sigue sus referencias de degradados con grano |
+| Carpetas | Pastel a partir del color de cada proyecto (lila, rosa, durazno), contorno del mismo tono y texto oscuro | Referencia de carpetas tipo archivo; «que combinen con Liiot» |
+| Igual altura | En una fila, la tarjeta que no debe agrandarla lleva `height: 0; min-height: 100%` y se desplaza por dentro; en las demás, `align-items: stretch` | Tarjetas simétricas sin cortar contenido |
+| «Nuevo proyecto» | Botón en la barra de la ventana de carpetas (no una carpeta más) | Así las carpetas nunca quedan huérfanas en otra fila |
+| Oficina de Liiot | `/oficina` con todos los proyectos; lo que se toca lleva a Mi espacio, Equipo o Proyectos (`RoomData.links`) | Dana pidió verla también en Liiot general |
 
 ## 5. Pendiente, en orden sugerido
 
-1. **Probar el bot de verdad**: Dana crea el bot con BotFather, pega el token en Seguimiento, vincula a los tres y al grupo, y prueba los botones (hecha, bloqueada con motivo, nueva fecha, comentario) y el ritual con «Enviar ahora».
-1. **Obsidian**: revisar con el equipo las 9 notas que HQ creó en Bleepy y los campos que agregó; documentar en el vault (plantilla `Entity_Tarea`) los estados nuevos `en_revision` y `bloqueada` si el equipo los adopta (eso toca el vault: pedir permiso antes).
-2. **Confirmar los avatares** con cada persona y ajustar rasgos en Ajustes (o en `backend/app/seed_data/bleepy.json` para el valor inicial).
-3. **Seguimiento que falta del plano**: aviso a Dana si una tarea vencida no tiene respuesta en 4 horas hábiles; check-in de tareas sin movimiento (3 días en progreso, o P0 cada 2 días hábiles); resumen diario opcional a Dana (por ejemplo 7:30).
-4. **Cronograma**: arrastrar barras para cambiar fechas y dependencias entre tareas.
-5. **Oficina más liviana (prioridad)**: en el portátil de Dana (i5-7200U con gráficos Intel HD 620), la oficina abierta en Edge deja el procesador casi al 100 % y todo el PC se pone lento; ese día Python tardó 16 s en arrancar. Opciones: limitar a 30 fps (`frameloop="demand"` + `invalidate()`), `dpr` 1, sin MSAA en el EffectComposer, bloom más barato, sombras de 1024 y un modo ligero que solo dibuje cuando algo cambia. Además, la ruta del café al sofá atraviesa la mesa de reuniones (mejorar `route()` en `office/layout.ts`).
-6. **Avatares VRM** con VRoid Studio (gratis) y `@pixiv/three-vrm`, dejando los chibis como respaldo.
-7. **Docker**: con Docker Desktop encendido, correr `docker compose up -d --build` y revisar que siembre y sirva la interfaz.
-8. **Texto libre en Telegram** («voy con 2 de 3 empresas…») con un analizador de reglas gratis. IA solo si no cuesta, y siempre con confirmación.
-9. **Identidad de Bleepy** cuando llegue la de Saray: reemplazar la paleta en `styles/tokens.css` (`[data-uni='bleepy']`) y `office/palette.ts`.
-10. **Salir de lo local** (Dana lo pidió el 27-oct): elegir una de las opciones de abajo. Solo si Dana lo pide: exportar tareas al vault o CI en GitHub.
-11. Fuera de HQ: `AGENTS.md` del vault describe roles distintos a los que Dana usó aquí (por ejemplo «David Ocaño · Business / Análisis»). Actualizarlo solo con su aprobación.
-
-### Opciones para no depender del PC local (revisadas el 27-oct-2026)
-
-HQ **no tiene login**: nunca se publica en internet sin una capa de acceso delante. En todas las opciones el bot sigue funcionando igual (no necesita webhook), pero solo puede haber un HQ encendido por token, y la base se lleva copiando `hq.db` con HQ cerrado.
+1. **Cuentas del equipo**: Dana ya entra con la suya (3-nov). Falta, si no lo hizo, generar los códigos de Juan David y Jean Pierre (Ajustes › Personas y accesos) y que revisen la quinta ronda en su pantalla.
+2. **Probar el bot con el token real**: pregunta diaria, botones de estado, avisos de grupo (Seguimiento › «Enviar los de hoy»), crear tarea con descripción.
+3. **Tableros de Obsidian**: los `.base` de SST y Bleepy agrupan por `por_hacer`, `en_progreso`, `hecho` (y `bloqueada`): si quieren ver `en_pausa` y `pruebas` en su orden, agregar esos valores a `groupOrder` (lo edita una persona; el agente no toca `.base`). Igual para la tabla de REGLAS de `_MCP_Rules` si quieren documentar el `status` de tareas.
+4. **Oficina más liviana** en el portátil (i5-7200U): `frameloop="demand"`, `dpr` 1, sin MSAA, sombras de 1024; mejorar `route()` (la ruta del café al sofá cruza la mesa).
+5. **Cronograma**: arrastrar barras para cambiar fechas; dependencias.
+6. **Confirmar los avatares** con cada persona (Ajustes › Mi perfil).
+7. **Salir de lo local** cuando Dana lo pida: ahora que hay cuentas, Cloudflare Tunnel + Access o Tailscale siguen siendo las opciones gratuitas (ver tabla abajo); con cuentas propias ya se podría usar un túnel sin capa extra, pero se recomienda mantenerla.
+8. Docker sin probar; avatares VRM opcionales.
 
 | Opción | Costo | Qué implica |
 |---|---|---|
-| Tailscale + `tailscale serve` | Gratis en el plan Personal (hasta 6 usuarios), que Tailscale define para uso no comercial; el plan para empresas cobra por usuario | HQ sigue en el PC de Dana; los tres entran desde portátil y celular por una red privada con HTTPS. Sin cambios de código. El PC debe estar encendido |
-| Cloudflare Tunnel + Cloudflare Access | Gratis hasta 50 usuarios; necesita un dominio administrado en Cloudflare | Dirección tipo `hq.<dominio>` con acceso por correo y código. Sin cambios de código. El PC (o el servidor) debe estar encendido |
-| Máquina virtual gratis 24/7 (Oracle Cloud Always Free) con Docker + Tailscale o Cloudflare | Gratis; pide tarjeta para verificar. En 2026 el cupo ARM bajó a 2 OCPU / 12 GB, que sobra para HQ | Funciona aunque el PC esté apagado. Más configuración (una tarde) |
-| Railway o Fly.io desde GitHub, con volumen para `/data` | Alrededor de US$5 al mes | Lo más simple para 24/7, pero queda en una URL pública: antes hay que agregar login a HQ |
+| Tailscale + `tailscale serve` | Gratis (Personal, hasta 6 usuarios, uso no comercial) | Red privada con HTTPS; el PC de Dana encendido |
+| Cloudflare Tunnel + Access | Gratis hasta 50 usuarios; dominio en Cloudflare (Liiot ya tiene uno) | `hub.<dominio>` con acceso por correo; el PC encendido |
+| VM gratis 24/7 (Oracle Always Free) + Docker | Gratis; pide tarjeta | Funciona con el PC apagado; una tarde de configuración |
 
 ## 6. Mapa del código y trampas conocidas
 
 ```
 backend/app/
-  main.py        arranque (siembra, bot), /ws, sirve frontend/dist
-  api.py         rutas /api
-  services.py    reglas: tareas, carga, salud, rúbrica, presencia, serializadores
-  bot.py         Telegram: comandos, botones, textos, recordatorios, ritual
-  vault.py       sincronización en dos vías con Obsidian (ciclo cada 15 s + al cambiar algo en HQ)
-  hooks.py       tras cada cambio: avisa por WebSocket, al bot y pide sincronizar con Obsidian
-  models.py      tablas · catalog.py  tipos, estados, prioridades, ajustes por defecto
-  seed.py + seed_data/bleepy.json   datos iniciales
-backend/tests/test_api.py           flujo completo, bot sin conexión, textos del bot
+  main.py        arranque: init_db → seed → migrate.upgrade → código de primera cuenta → bot → sincronización
+  auth.py        contraseñas, sesiones, códigos, dependencias current_member/require_admin
+  api_auth.py    /api/auth/* (state, setup, login, logout, code, code/use, password, account) y /api/accounts
+  api.py         /api/* con sesión: proyectos, fases, mínimos, etapas, rúbrica, tareas, presencia, equipo, Excel, Telegram, vault
+  services.py    tareas, checklist, rúbrica por fase, presencia, proyectos · phases.py · analytics.py · export_xlsx.py
+  bot.py         Telegram (avisos de grupo y personales, pregunta diaria) · chat.py  intenciones por reglas
+  vault.py       Obsidian (Ctx traduce fase/etapa; checklist como lista) · migrate.py  versión 2 con copia previa
+  recovery.py    código de recuperación desde el PC (recuperar-acceso.cmd)
+backend/tests/test_api.py           cuentas, tareas, fases, proyectos, análisis + Excel, presencia, Obsidian, bot
 frontend/src/
-  pages/         una por sección (OfficePage, MePage, TasksPage, LaunchPage, TimelinePage, TeamPage, FollowupPage, SettingsPage)
-  components/    TaskDrawer, TaskForm, Avatar (2D), Shell, bits (chips, medidores, metadatos de estado)
-  office/        Office3D (lienzo, luces, efectos, burbujas), Room (sala), Avatar3D, layout (lugares y rutas), palette, anchors
-  styles/        tokens.css (oscuro, claro, Bleepy) y app.css
-  api.ts         consultas y mutaciones (actualización optimista) · realtime.ts  WebSocket · prefs.tsx  preferencias locales
+  App.tsx        entrada (LoginPage) o espacio de trabajo con rutas · world.tsx  mundo actual y tema
+  pages/         HomePage (ventanas, carpetas, boletos), LoginPage, OfficePage (de Liiot y de cada proyecto, con el panel del equipo),
+                 TasksPage (?persona=), PhasesPage, TimelinePage, MePage, TeamPage (anillo, franja de 14 días), FollowupPage, SettingsPage
+  components/    Shell, Brand (+ brandPaths), WorldTransition, TaskDrawer (checklist), TaskForm, ProjectDialog, Avatar, bits (StatePicker…)
+  office/        Office3D, Room (RoomData.links), Avatar3D, layout (lugares de los 4 estados), palette (Liiot y Bleepy)
+  styles/        tokens.css · app.css (base y componentes) · pages.css (páginas)
+frontend/vite.config.ts   HQ_BACKEND=127.0.0.1:8010 apunta el servidor de desarrollo a una copia de prueba
 ```
 
-- SQLModel 0.0.48 exige fechas con zona horaria: usar `services.utcnow()`.
-- El `<Html>` de drei a veces queda vacío con React 19: las burbujas usan una capa DOM propia (`office/anchors.ts` + `BubbleProjector` en `Office3D.tsx`).
-- `<Float>` de drei rota alrededor de su propio origen: envolverlo en un `<group position>`.
-- `useFrame` con prioridad mayor que 0 toma el control del render (el EffectComposer ya usa prioridad 1).
-- Cambios del frontend: basta con compilar (el servidor lee `dist` del disco). Cambios del backend: reiniciar HQ.
-- Ritual y recordatorios corren con la zona `America/Bogota` (`HQ_TZ`).
-- En Windows, `http://localhost` prueba IPv6 primero y tarda unos 3 s en caer a IPv4 (uvicorn escucha en 127.0.0.1): los chequeos de `iniciar.ps1` usan `127.0.0.1`.
-- `Get-ChildItem <archivo> -Recurse` busca ese nombre en todas las subcarpetas, `node_modules` incluido: no usarlo con archivos sueltos.
-- `Start-Job` tarda unos 6 s en arrancar en este PC; el script abre el navegador desde un runspace (`[powershell]::Create()`).
-- Un HQ lanzado desde una sesión de Claude Code muere cuando esa sesión se cierra; para que quede abierto, lanzar `iniciar.cmd` en su propia ventana.
-- Columnas nuevas en tablas existentes: `db._add_missing_columns()` las agrega al arrancar (SQLite no lo hace con `create_all`).
-- Probar la sincronización siempre sobre copias: `HQ_VAULT_PATH=<copia>` y `HQ_DB_PATH=<copia>`; en las pruebas `HQ_VAULT_PATH=off`. Por defecto HQ busca el vault solo en `G:\Mi unidad\Liiot`.
-- Windows PowerShell 5.1: `Invoke-RestMethod` entrega un arreglo JSON como un solo objeto en la tubería (envolver con `@(...) | ForEach-Object { $_ }`) y muestra mal las tildes; los datos están bien.
+- SQLModel 0.0.48 exige fechas con zona: usar `services.utcnow()` y `services.aware()` al comparar.
+- Columnas nuevas: `db._add_missing_columns()`; datos que cambian de forma: `migrate.py` (sube `Setting schema.version` y hace copia antes).
+- La interfaz manda `X-Liiot: 1` en todo; un `fetch` sin él recibe 403 en los cambios.
+- Las burbujas de la oficina usan una capa DOM propia (`office/anchors.ts`). Si el panel del navegador está oculto, la animación corre lenta y las burbujas tardan en acomodarse: no es un error.
+- `<Float>` de drei rota alrededor de su origen: envolverlo en un `<group position>`.
+- Cambios del frontend: basta con compilar. Cambios del backend: reiniciar Liiot Hub.
+- En Windows, `localhost` prueba IPv6 primero (3 s): los chequeos usan `127.0.0.1`.
+- `iniciar.ps1` va en UTF-8 con BOM y CRLF (PowerShell 5.1).
+- Un Liiot Hub lanzado desde Claude Code muere al cerrar esa sesión; para dejarlo abierto, `iniciar.cmd` en su propia ventana.
+- Al probar con una copia: `$env:TELEGRAM_BOT_TOKEN = ' '` (un espacio). Vacío lo borra y entonces se lee el token real de `.env`.
+- Para diseñar rápido: servidor de prueba en 8010 (`scratchpad/test/run-test.ps1` de la sesión, o el mismo comando con `HQ_DB_PATH`/`HQ_VAULT_PATH` a copias) y Vite con `HQ_BACKEND=127.0.0.1:8010` en otro puerto; `npm run build` solo al final, porque el Liiot Hub real sirve `frontend/dist`.
+- `.key` es la muestra de color de las leyendas (ancho 14 px): no la uses como nombre de otra clase.
+- Con el panel del navegador oculto, una captura después de desplazarse sale vieja y la escena 3D no se pinta: navega de nuevo antes de capturar.
+- `PowerShell 5.1` rompe las comillas dobles dentro de argumentos para programas: los parches con marcas van en un script de Python.
 
 Cómo verificar antes de entregar:
 
@@ -171,23 +159,18 @@ cd C:\Users\dana\dev\liiot-hq\backend; .\.venv\Scripts\python.exe -m pytest -q
 cd C:\Users\dana\dev\liiot-hq\frontend; npm run build
 ```
 
-Luego abrir `iniciar.cmd` y revisar http://localhost:8000 en el navegador: Oficina (las tres burbujas, ayudas al pasar el mouse, universo Bleepy, modo claro), Tareas (abrir una ficha) y las demás páginas sin errores en consola.
-
 ## 7. Prompt para la próxima sesión
 
-Copiar y pegar en una sesión nueva de Claude Code abierta en `C:\Users\dana\dev\liiot-hq`:
-
 ```text
-Continúa Liiot HQ, mi herramienta interna (no es un proyecto del vault: no lo registres ahí ni toques el vault).
-El código está en C:\Users\dana\dev\liiot-hq. Antes de cambiar nada, lee completos CONTINUAR.md y README.md:
-ahí están el encargo original, las reglas, las decisiones y el estado.
+Continúa Liiot Hub (antes Liiot HQ), mi herramienta interna. El código está en C:\Users\dana\dev\liiot-hq.
+Antes de cambiar nada, lee completos CONTINUAR.md y README.md: ahí están el encargo, las reglas, las decisiones y el estado.
 
-Reglas: todo local, sin desplegar y sin gastar dinero; solo tareas de Bleepy; las personas externas no entran;
-el token de Telegram solo en .env; no hagas commit ni push si no te lo pido.
+Reglas: todo local y gratis; el vault solo lo toca la sincronización (solo encabezados, nunca cuerpos ni .base);
+prueba siempre con copias de hq.db y del vault y sin bot; el token de Telegram solo en .env;
+no hagas commit ni push si no te lo pido; respóndeme en español.
 
-Hoy quiero avanzar en: <elige de la sección 5 de CONTINUAR.md, por ejemplo «probar el bot con el token real»,
-«avatares VRM» o «arrastrar barras en el cronograma»>.
+Hoy quiero avanzar en: <elige de la sección 5 de CONTINUAR.md>.
 
-Al terminar: corre las pruebas del backend y npm run build, revisa la app en el navegador,
-actualiza CONTINUAR.md (estado y pendientes) y dime qué quedó listo y qué no.
+Al terminar: corre las pruebas del backend y npm run build, revisa la app en el navegador con copias,
+actualiza CONTINUAR.md y dime qué quedó listo y qué no.
 ```

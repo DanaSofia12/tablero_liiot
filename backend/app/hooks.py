@@ -2,13 +2,18 @@
 from __future__ import annotations
 
 from . import bot, vault
+from .db import session_scope
+from .models import Task
 from .realtime import hub, notify
 
 
 async def task_changed(task_id: int, info: dict, actor: str, source: str, owner_id: str | None = None, task_key: str | None = None) -> None:
     await notify("tasks", taskId=task_id, source=source)
     if info.get("done"):
-        await hub.publish({"type": "celebrate", "taskId": task_id, "memberId": owner_id, "taskKey": task_key})
+        with session_scope() as s:
+            task = s.get(Task, task_id)
+            title = task.title if task else None
+        await hub.publish({"type": "celebrate", "taskId": task_id, "memberId": owner_id, "taskKey": task_key, "taskTitle": title})
     await bot.on_task_change(task_id, info, actor, source)
     if source != vault.SOURCE:
         vault.request_sync()  # el cambio viaja a la nota de Obsidian en un par de segundos

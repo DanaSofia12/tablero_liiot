@@ -74,19 +74,41 @@ export function greeting(date = new Date()): string {
   return 'Buenas noches'
 }
 
-export const isOpen = (t: Task) => t.status !== 'hecha'
+export const isOpen = (t: Task) => t.status !== 'finalizada'
 export const isOverdue = (t: Task, today = todayISO()) => isOpen(t) && !!t.dueDate && t.dueDate < today
 
 const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 
-/** Bloqueadas primero, luego por fecha y prioridad. */
+/** En pausa primero, luego por fecha y prioridad. */
 export function byUrgency(a: Task, b: Task): number {
-  const blocked = Number(b.status === 'bloqueada') - Number(a.status === 'bloqueada')
-  if (blocked) return blocked
+  const paused = Number(b.status === 'en_pausa') - Number(a.status === 'en_pausa')
+  if (paused) return paused
   const da = a.dueDate ?? '9999-12-31'
   const db = b.dueDate ?? '9999-12-31'
   if (da !== db) return da < db ? -1 : 1
   return (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9)
 }
 
-export const EFFORT_POINTS: Record<string, number> = { S: 1, M: 2, L: 3 }
+export const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+export function monthLabel(year: number, month: number): string {
+  const name = MONTHS_LONG[month]
+  return `${name[0].toUpperCase()}${name.slice(1)} ${year}`
+}
+
+/** Primer y último día (ISO) del mes de una fecha. */
+export function monthRange(iso: string): { start: string; end: string } {
+  const d = parseDay(iso)
+  const start = new Date(d.getFullYear(), d.getMonth(), 1)
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  return { start: toISO(start), end: toISO(end) }
+}
+
+export function addMonths(iso: string, n: number): string {
+  const d = parseDay(iso)
+  return toISO(new Date(d.getFullYear(), d.getMonth() + n, 1))
+}
+
+export function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`
+}

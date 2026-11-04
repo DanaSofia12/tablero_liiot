@@ -1,10 +1,10 @@
 ﻿<#
-  Liiot HQ: instala lo que falte, compila la interfaz si cambió y abre HQ en el navegador.
+  Liiot Hub: instala lo que falte, compila la interfaz si cambió y la abre en el navegador.
 
   Uso (o doble clic en iniciar.cmd):
     .\iniciar.ps1                 solo este PC, puerto 8000
     .\iniciar.ps1 -Puerto 8080    otro puerto
-    .\iniciar.ps1 -Red            también desde otros equipos de la misma red (sin contraseña)
+    .\iniciar.ps1 -Red            también desde otros equipos de la misma red (cada quien con su cuenta)
     .\iniciar.ps1 -SinNavegador   no abre el navegador
     .\iniciar.ps1 -Compilar       fuerza a compilar la interfaz de nuevo
 #>
@@ -27,14 +27,14 @@ $api = "http://127.0.0.1:$Puerto"
 function Paso([string]$texto) { Write-Host "`n> $texto" -ForegroundColor Magenta }
 function Falla([string]$texto) { Write-Host "`nX $texto" -ForegroundColor Red; exit 1 }
 
-# ¿El puerto ya está en uso? Si es HQ, solo abre el navegador; si es otro programa, avisa.
+# ¿El puerto ya está en uso? Si es Liiot Hub, solo abre el navegador; si es otro programa, avisa.
 if (Get-NetTCPConnection -LocalPort $Puerto -State Listen -ErrorAction SilentlyContinue) {
   try {
     Invoke-RestMethod "$api/api/health" -TimeoutSec 3 | Out-Null
   } catch {
     Falla "El puerto $Puerto está ocupado por otro programa. Prueba con: .\iniciar.ps1 -Puerto 8080"
   }
-  Paso "HQ ya está corriendo en $url"
+  Paso "Liiot Hub ya está corriendo en $url"
   if (-not $SinNavegador) { Start-Process $url }
   exit 0
 }
@@ -93,10 +93,10 @@ if ($Red) {
   $escucha = '0.0.0.0'
   $ips = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' } | ForEach-Object { "http://$($_.IPAddress):$Puerto" }) -join '  '
   Write-Host "`nModo red: desde otro equipo de esta red entra con $ips" -ForegroundColor Yellow
-  Write-Host 'HQ no tiene contraseña: úsalo solo en una red de confianza (la de la casa u oficina).' -ForegroundColor Yellow
+  Write-Host 'Cada persona entra con su cuenta. Aun así, usa el modo red solo en una red de confianza (casa u oficina).' -ForegroundColor Yellow
 }
 if (-not (Test-Path (Join-Path $root '.env'))) {
-  Write-Host "`nSin archivo .env: HQ funciona, pero el bot de Telegram queda apagado (ver README)." -ForegroundColor DarkGray
+  Write-Host "`nSin archivo .env: Liiot Hub funciona, pero el bot de Telegram queda apagado (ver README)." -ForegroundColor DarkGray
 }
 if (-not $SinNavegador) {
   # Abre el navegador apenas el servidor responda (en segundo plano dentro de este mismo proceso;
@@ -109,7 +109,7 @@ if (-not $SinNavegador) {
   }).AddArgument($api).AddArgument($url)
   $null = $abridor.BeginInvoke()
 }
-Paso "Liiot HQ en $url  (para detenerlo: Ctrl+C o cierra esta ventana)"
+Paso "Liiot Hub en $url  (para detenerlo: Ctrl+C o cierra esta ventana)"
 Push-Location $back
 try {
   & $venvPy -m uvicorn app.main:app --host $escucha --port $Puerto

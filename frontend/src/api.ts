@@ -1,29 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { usePrefs } from './prefs'
 import { useUI } from './ui'
 import type {
+  Account,
+  AuthState,
   Catalog,
   CheckIn,
   Member,
-  Metrics,
+  PhasesData,
   Presence,
+  PresenceState,
   Project,
+  ProjectData,
+  ProjectMetrics,
   Rubric,
-  Stage,
   Task,
   TaskEvent,
   TaskPatch,
+  TeamData,
   TelegramSettings,
   TelegramStatus,
   VaultStatus,
 } from './types'
 
-export const OFFLINE_MESSAGE = 'No hay conexión con HQ. Revisa que la ventana «Liiot HQ» siga abierta (o ábrela con iniciar.cmd).'
+export const APP_NAME = 'Liiot Hub'
+export const OFFLINE_MESSAGE = `No hay conexión con ${APP_NAME}. Revisa que la ventana «${APP_NAME}» siga abierta (o ábrela con iniciar.cmd).`
+
+/** Si la sesión vence, la app vuelve a la pantalla de entrada. */
+export const UNAUTHORIZED_EVENT = 'hub:unauthorized'
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
-    res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...init })
+    res = await fetch(path, {
+      credentials: 'same-origin',
+      ...init,
+      headers: { 'Content-Type': 'application/json', 'X-Liiot': '1', ...(init?.headers ?? {}) },
+    })
   } catch {
     throw new Error(OFFLINE_MESSAGE)
   }
@@ -35,6 +47,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* respuesta sin cuerpo JSON */
     }
+    if (res.status === 401 && !path.startsWith('/api/auth/')) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
     throw new Error(message)
   }
   return (await res.json()) as T
@@ -48,72 +61,81 @@ export const api = {
 }
 
 export const qk = {
+  auth: ['auth'] as const,
   catalog: ['catalog'] as const,
   members: ['members'] as const,
+  accounts: ['accounts'] as const,
   projects: ['projects'] as const,
   project: ['project'] as const,
   tasks: ['tasks'] as const,
   metrics: ['metrics'] as const,
   presence: ['presence'] as const,
+  phases: ['phases'] as const,
   rubric: ['rubric'] as const,
+  team: ['team'] as const,
   telegram: ['telegram'] as const,
   checkins: ['checkins'] as const,
   events: ['events'] as const,
   vault: ['vault'] as const,
 }
 
-export const useCatalog = () =>
-  useQuery({ queryKey: qk.catalog, queryFn: () => api.get<Catalog>('/api/catalog'), staleTime: Infinity })
+export const useAuth = () => useQuery({ queryKey: qk.auth, queryFn: () => api.get<AuthState>('/api/auth/state'), staleTime: 60_000, retry: 0 })
+
+/** La persona que inició sesión (o un objeto vacío mientras carga: solo se usa dentro de la app ya autenticada). */
+export function useMe(): Member {
+  return (useAuth().data?.me ?? {}) as Member
+}
+
+export const useCatalog = () => useQuery({ queryKey: qk.catalog, queryFn: () => api.get<Catalog>('/api/catalog'), staleTime: Infinity })
 export const useMembers = () => useQuery({ queryKey: qk.members, queryFn: () => api.get<Member[]>('/api/members') })
+export const useAccounts = (enabled = true) => useQuery({ queryKey: qk.accounts, queryFn: () => api.get<Account[]>('/api/accounts'), enabled })
 export const useProjects = () => useQuery({ queryKey: qk.projects, queryFn: () => api.get<Project[]>('/api/projects') })
 
-/** Proyecto elegido arriba a la izquierda (si el guardado ya no existe, el primero de la lista). */
-export function useCurrentProject() {
-  const { project: saved, setProject } = usePrefs()
-  const projects = useProjects().data ?? []
-  const project = projects.find((p) => p.id === saved) ?? projects[0]
-  return { projectId: project?.id ?? saved, project, projects, setProject }
-}
-
-export function useProject(id?: string) {
-  const { projectId } = useCurrentProject()
-  const pid = id ?? projectId
+export function useProjectData(pid: string | null | undefined) {
   return useQuery({
     queryKey: [...qk.project, pid],
-    queryFn: () => api.get<{ project: Project; stages: Stage[] }>(`/api/projects/${encodeURIComponent(pid)}`),
+    queryFn: () => api.get<ProjectData>(`/api/projects/${encodeURIComponent(pid!)}`),
     enabled: Boolean(pid),
   })
 }
 
-/** Todas las tareas de todos los proyectos (Mi espacio, Equipo y la oficina las mezclan). */
+/** Todas las tareas de todos los proyectos. */
 export const useTasks = () => useQuery({ queryKey: qk.tasks, queryFn: () => api.get<Task[]>('/api/tasks') })
 
-/** Solo las tareas del proyecto elegido (o del indicado). */
-export function useProjectTasks(id?: string) {
-  const { projectId } = useCurrentProject()
-  const pid = id ?? projectId
+/** Solo las tareas de un proyecto. */
+export function useProjectTasks(pid: string | null | undefined) {
   const query = useTasks()
-  return { ...query, data: query.data?.filter((t) => t.projectId === pid) }
+  return { ...query, data: pid ? query.data?.filter((t) => t.projectId === pid) : query.data }
 }
 
-/** Indicadores del proyecto; la carga del equipo suma todos los proyectos o, con team='project', solo ese. */
-export function useMetrics(id?: string, team: 'all' | 'project' = 'all') {
-  const { projectId } = useCurrentProject()
-  const pid = id ?? projectId
+export function useMetrics(pid: string | null | undefined) {
   return useQuery({
-    queryKey: [...qk.metrics, pid, team],
-    queryFn: () => api.get<Metrics>(`/api/metrics?project=${encodeURIComponent(pid)}&team=${team}`),
+    queryKey: [...qk.metrics, pid],
+    queryFn: () => api.get<ProjectMetrics>(`/api/metrics?project=${encodeURIComponent(pid!)}`),
     enabled: Boolean(pid),
   })
 }
 
-export function useRubric(id?: string) {
-  const { projectId } = useCurrentProject()
-  const pid = id ?? projectId
+export function usePhases(pid: string | null | undefined) {
   return useQuery({
-    queryKey: [...qk.rubric, pid],
-    queryFn: () => api.get<Rubric>(`/api/rubric?project=${encodeURIComponent(pid)}`),
+    queryKey: [...qk.phases, pid],
+    queryFn: () => api.get<PhasesData>(`/api/projects/${encodeURIComponent(pid!)}/phases`),
     enabled: Boolean(pid),
+  })
+}
+
+export function useRubric(phaseId: number | null | undefined) {
+  return useQuery({
+    queryKey: [...qk.rubric, phaseId],
+    queryFn: () => api.get<Rubric>(`/api/phases/${phaseId}/rubric`),
+    enabled: phaseId != null,
+  })
+}
+
+export function useTeam(pid: string | null) {
+  return useQuery({
+    queryKey: [...qk.team, pid ?? 'todos'],
+    queryFn: () => api.get<TeamData>(pid ? `/api/team?project=${encodeURIComponent(pid)}` : '/api/team'),
   })
 }
 
@@ -124,15 +146,8 @@ export const useTelegram = () =>
   })
 export const useCheckins = () => useQuery({ queryKey: qk.checkins, queryFn: () => api.get<CheckIn[]>('/api/checkins') })
 export const useVault = () => useQuery({ queryKey: qk.vault, queryFn: () => api.get<VaultStatus>('/api/vault'), refetchInterval: 30_000 })
-
-export function usePresence() {
-  const { ignoreHours } = usePrefs()
-  return useQuery({
-    queryKey: [...qk.presence, ignoreHours],
-    queryFn: () => api.get<Presence[]>(`/api/presence?ignoreHours=${ignoreHours}`),
-    refetchInterval: 60_000,
-  })
-}
+export const usePresence = () =>
+  useQuery({ queryKey: qk.presence, queryFn: () => api.get<Presence[]>('/api/presence'), refetchInterval: 60_000 })
 
 export const useTaskEvents = (taskId: number | null) =>
   useQuery({
@@ -148,34 +163,35 @@ export function useRefresh() {
 
 export interface TaskCreate {
   title: string
+  summary?: string
   projectId?: string
   status?: string
-  summary?: string
   type?: string
   priority?: string
   ownerId?: string
   collaborators?: string[]
   dueDate?: string | null
   startDate?: string | null
+  phaseId?: number | null
   stageId?: number | null
-  effort?: string
-  rubric?: string[]
+  checklist?: string[]
 }
 
-/** Crear y editar tareas. Si algo falla (por ejemplo, HQ está apagado) se avisa siempre y la tarjeta vuelve a su lugar. */
+const TASK_KEYS = [qk.tasks, qk.metrics, qk.presence, qk.phases, qk.events, qk.projects, qk.project, qk.team]
+
+/** Crear y editar tareas. Si algo falla (por ejemplo, Liiot Hub está cerrado) se avisa siempre y la tarjeta vuelve a su lugar. */
 export function useTaskActions() {
   const qc = useQueryClient()
-  const { me } = usePrefs()
   const { toast } = useUI()
   const refresh = () => {
-    for (const key of [qk.tasks, qk.metrics, qk.presence, qk.rubric, qk.events, qk.projects]) qc.invalidateQueries({ queryKey: key })
+    for (const key of TASK_KEYS) qc.invalidateQueries({ queryKey: key })
   }
   const update = useMutation({
-    mutationFn: ({ id, patch }: { id: number; patch: TaskPatch }) => api.patch<Task>(`/api/tasks/${id}`, { ...patch, actorId: me }),
+    mutationFn: ({ id, patch }: { id: number; patch: TaskPatch }) => api.patch<Task>(`/api/tasks/${id}`, patch),
     onMutate: async ({ id, patch }) => {
       await qc.cancelQueries({ queryKey: qk.tasks })
       const previous = qc.getQueryData<Task[]>(qk.tasks)
-      if (previous) qc.setQueryData<Task[]>(qk.tasks, previous.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+      if (previous) qc.setQueryData<Task[]>(qk.tasks, previous.map((t) => (t.id === id ? ({ ...t, ...patch } as Task) : t)))
       return { previous }
     },
     onError: (err, _vars, ctx) => {
@@ -185,17 +201,17 @@ export function useTaskActions() {
     onSettled: refresh,
   })
   const create = useMutation({
-    mutationFn: (data: TaskCreate) => api.post<Task>('/api/tasks', { ...data, actorId: me }),
+    mutationFn: (data: TaskCreate) => api.post<Task>('/api/tasks', data),
     onSuccess: refresh,
     onError: (err) => toast(`No se creó la tarea: ${(err as Error).message}`, 'bad'),
   })
   const comment = useMutation({
-    mutationFn: ({ id, text }: { id: number; text: string }) => api.post(`/api/tasks/${id}/comments`, { text, actorId: me }),
+    mutationFn: ({ id, text }: { id: number; text: string }) => api.post(`/api/tasks/${id}/comments`, { text }),
     onSuccess: refresh,
     onError: (err) => toast((err as Error).message, 'bad'),
   })
   const followup = useMutation({
-    mutationFn: (id: number) => api.post<{ sent: boolean; message: string }>(`/api/tasks/${id}/followup`, { actorId: me }),
+    mutationFn: (id: number) => api.post<{ sent: boolean; message: string }>(`/api/tasks/${id}/followup`),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.checkins }),
     onError: (err) => toast((err as Error).message, 'bad'),
   })
@@ -209,14 +225,15 @@ export interface ProjectCreate {
   leadId?: string | null
   pilotDate?: string | null
   color?: string
-  basicRubric?: boolean
+  theme?: string
+  firstPhase?: string
 }
 
 export function useProjectActions() {
   const qc = useQueryClient()
   const { toast } = useUI()
   const refresh = () => {
-    for (const key of [qk.projects, qk.project, qk.metrics, qk.rubric, qk.tasks, qk.vault]) qc.invalidateQueries({ queryKey: key })
+    for (const key of [qk.projects, qk.project, qk.metrics, qk.phases, qk.tasks, qk.vault]) qc.invalidateQueries({ queryKey: key })
   }
   const create = useMutation({
     mutationFn: (data: ProjectCreate) => api.post<Project>('/api/projects', data),
@@ -230,6 +247,20 @@ export function useProjectActions() {
     onError: (err) => toast((err as Error).message, 'bad'),
   })
   return { create, update }
+}
+
+/** Cambiar mi estado en la oficina (Trabajando, En reunión, Disponible, Descansando). */
+export function usePresenceAction() {
+  const qc = useQueryClient()
+  const { toast } = useUI()
+  return useMutation({
+    mutationFn: (body: { state: PresenceState; note?: string; taskId?: number | null }) => api.patch<Presence>('/api/me/presence', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.presence })
+      qc.invalidateQueries({ queryKey: qk.members })
+    },
+    onError: (err) => toast((err as Error).message, 'bad'),
+  })
 }
 
 /** Enlace para abrir la nota de una tarea directamente en Obsidian. */

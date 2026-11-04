@@ -8,16 +8,25 @@ import { DESKS, ROOM } from './layout'
 type V3 = [number, number, number]
 
 export interface RoomData {
-  counts: { todo: number; doing: number; blocked: number; done: number }
-  blockingOk: number
-  blockingTotal: number
+  name: string
+  phase: string | null
+  counts: { todo: number; doing: number; paused: number; testing: number; done: number }
+  /** Lo que falta para pasar de fase: mínimos cumplidos (o indispensables de la rúbrica). */
+  goalOk: number
+  goalTotal: number
+  goalLabel: string
   daysToPilot: number | null
+  milestone: string
   tasksDone: number
   tasksTotal: number
   overdue: number
-  pilotDay: number
+  pilotDate: string | null
   ready: boolean
+  /** Qué dice cada cosa que se puede tocar (la oficina de Liiot lleva a otras secciones). */
+  links?: Partial<Record<'desk' | 'board' | 'tv' | 'calendar' | 'portal' | 'goal', string>>
 }
+
+const MONTHS_UP = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
 
 function Mat({ c, rough = 0.85, metal = 0, emissive, glow = 0 }: { c: string; rough?: number; metal?: number; emissive?: string; glow?: number }) {
   return <meshStandardMaterial color={c} roughness={rough} metalness={metal} emissive={emissive ?? '#000000'} emissiveIntensity={glow} />
@@ -202,7 +211,7 @@ function Plant({ p, s = 1 }: { p: V3; s?: number }) {
   )
 }
 
-function Desk({ id, pal, onClick }: { id: string; pal: ScenePalette; onClick: () => void }) {
+function Desk({ id, pal, label, onClick }: { id: string; pal: ScenePalette; label: string; onClick: () => void }) {
   const d = DESKS[id]
   const z0 = 2.6
   const top = 0.83
@@ -212,7 +221,7 @@ function Desk({ id, pal, onClick }: { id: string; pal: ScenePalette; onClick: ()
     if (screen.current) screen.current.emissiveIntensity = (pal.night ? 1.4 : 0.6) + Math.sin(clock.elapsedTime * 2 + cx) * 0.15
   })
   return (
-    <Hot label="Ver su espacio" at={[cx, 1.9, 3.1]} onClick={onClick}>
+    <Hot label={label} at={[cx, 1.9, 3.1]} onClick={onClick}>
       <Block p={[d.x0 + 0.12, 0.37, z0 + 0.52]} s={[0.12, 0.74, 0.9]} c={pal.wood} />
       <Block p={[d.x0 + 2.08, 0.37, z0 + 0.52]} s={[0.12, 0.74, 0.9]} c={pal.wood} />
       <Block p={[cx, 0.785, z0 + 0.525]} s={[2.2, 0.09, 1.05]} c={pal.desk} r={0.03} />
@@ -297,11 +306,11 @@ function Board({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onCl
       ctx.fillRect(0, 0, 960, 58)
       ctx.fillStyle = '#ffffff'
       ctx.font = '700 30px "Pixelify Sans", monospace'
-      ctx.fillText('TABLERO · BLEEPY', 24, 40)
+      ctx.fillText(`TABLERO · ${data.name.toUpperCase()}`.slice(0, 40), 24, 40)
       const cols = [
-        { label: 'POR HACER', n: data.counts.todo, blocked: 0 },
-        { label: 'EN CURSO', n: data.counts.doing, blocked: data.counts.blocked },
-        { label: 'HECHO', n: data.counts.done, blocked: 0 },
+        { label: 'PENDIENTES', n: data.counts.todo, blocked: 0 },
+        { label: 'EN PROGRESO', n: data.counts.doing + data.counts.testing, blocked: data.counts.paused },
+        { label: 'FINALIZADAS', n: data.counts.done, blocked: 0 },
       ]
       cols.forEach((col, i) => {
         const x0 = 20 + i * 315
@@ -312,7 +321,7 @@ function Board({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onCl
         for (let k = 0; k < total; k++) {
           const cx = x0 + (k % 5) * 58
           const cy = 108 + Math.floor(k / 5) * 72
-          ctx.fillStyle = k < col.blocked ? '#e8435f' : i === 2 ? '#9ee0b5' : pal.notes[(k + i) % pal.notes.length]
+          ctx.fillStyle = k < col.blocked ? '#f0a93b' : i === 2 ? '#9ee0b5' : pal.notes[(k + i) % pal.notes.length]
           ctx.fillRect(cx, cy, 50, 56)
           ctx.fillStyle = 'rgba(0,0,0,.12)'
           ctx.fillRect(cx, cy + 50, 50, 6)
@@ -323,10 +332,10 @@ function Board({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onCl
         }
       })
     },
-    [pal.paper, pal.acc, data.counts.todo, data.counts.doing, data.counts.done, data.counts.blocked, pal.notes],
+    [pal.paper, pal.acc, data.name, data.counts.todo, data.counts.doing, data.counts.testing, data.counts.done, data.counts.paused, pal.notes],
   )
   return (
-    <Hot label="Tablero → Tareas" at={[4, 2.85, 0.3]} onClick={onClick}>
+    <Hot label={data.links?.board ?? 'Tablero → Tareas'} at={[4, 2.85, 0.3]} onClick={onClick}>
       <mesh position={[4, 1.8, 0.03]} castShadow>
         <boxGeometry args={[4.9, 1.6, 0.06]} />
         <Mat c={pal.trim} />
@@ -339,44 +348,45 @@ function Board({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onCl
   )
 }
 
-function Tv({ data, onClick }: { data: RoomData; onClick: () => void }) {
+function Tv({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onClick: () => void }) {
   const tex = useCanvasTexture(
     800,
     340,
     (ctx) => {
       const g = ctx.createLinearGradient(0, 0, 800, 340)
-      g.addColorStop(0, '#120a24')
-      g.addColorStop(1, '#2a0f2e')
+      g.addColorStop(0, pal.screen)
+      g.addColorStop(1, pal.sky2)
       ctx.fillStyle = g
       ctx.fillRect(0, 0, 800, 340)
       ctx.fillStyle = 'rgba(255,255,255,.7)'
       ctx.font = '700 24px "Pixelify Sans", monospace'
-      ctx.fillText('BLEEPY · PILOTO', 34, 52)
+      ctx.fillText(`${data.name}${data.phase ? ` · ${data.phase}` : ''}`.toUpperCase().slice(0, 34), 34, 52)
       const grad = ctx.createLinearGradient(34, 0, 420, 0)
-      grad.addColorStop(0, '#b26bff')
-      grad.addColorStop(0.6, '#ff4f7a')
-      grad.addColorStop(1, '#ffb547')
+      grad.addColorStop(0, pal.neonA)
+      grad.addColorStop(0.6, pal.acc3)
+      grad.addColorStop(1, pal.neonB)
       ctx.fillStyle = grad
       ctx.font = '700 120px "Unbounded Variable", "Pixelify Sans", sans-serif'
-      ctx.fillText(`${data.blockingOk}/${data.blockingTotal}`, 30, 196)
+      ctx.fillText(`${data.tasksDone}/${data.tasksTotal}`, 30, 196)
       ctx.fillStyle = 'rgba(255,255,255,.75)'
       ctx.font = '700 22px "Pixelify Sans", monospace'
-      ctx.fillText('BLOQUEANTES CUMPLIDOS', 36, 236)
-      ctx.fillText(data.daysToPilot != null ? `PILOTO EN ${data.daysToPilot} DÍAS` : 'SIN FECHA', 36, 282)
-      ctx.fillText(`TAREAS ${data.tasksDone}/${data.tasksTotal} · VENCIDAS ${data.overdue}`, 36, 318)
-      const bars = [data.counts.todo, data.counts.doing, data.counts.blocked, data.counts.done]
-      const colors = ['#cdb4f5', '#b26bff', '#e8435f', '#9ee0b5']
+      ctx.fillText('TAREAS FINALIZADAS', 36, 236)
+      ctx.fillText(data.daysToPilot != null && data.daysToPilot >= 0 ? `${data.milestone} EN ${data.daysToPilot} DÍAS` : 'SIN FECHA CLAVE', 36, 282)
+      ctx.fillText(`ATRASADAS ${data.overdue} · EN PAUSA ${data.counts.paused}`, 36, 318)
+      const bars = [data.counts.todo, data.counts.doing, data.counts.paused, data.counts.testing, data.counts.done]
+      const colors = ['#cdb4f5', '#9b5de5', '#f0a93b', '#3b8cf6', '#22a06b']
       const max = Math.max(1, ...bars)
       bars.forEach((n, i) => {
         const h = (n / max) * 210
         ctx.fillStyle = colors[i]
-        ctx.fillRect(560 + i * 56, 300 - h, 38, h)
+        ctx.fillRect(520 + i * 52, 300 - h, 36, h)
       })
     },
-    [data.blockingOk, data.blockingTotal, data.daysToPilot, data.tasksDone, data.tasksTotal, data.overdue, data.counts.todo, data.counts.doing, data.counts.blocked, data.counts.done],
+    [pal.screen, pal.sky2, pal.neonA, pal.acc3, pal.neonB, data.name, data.phase, data.milestone, data.daysToPilot, data.tasksDone, data.tasksTotal, data.overdue,
+      data.counts.todo, data.counts.doing, data.counts.paused, data.counts.testing, data.counts.done],
   )
   return (
-    <Hot label="Pantalla → Carga del equipo" at={[8.9, 2.95, 0.2]} onClick={onClick}>
+    <Hot label={data.links?.tv ?? 'Pantalla → Equipo'} at={[8.9, 2.95, 0.2]} onClick={onClick}>
       <mesh position={[8.9, 1.92, 0.05]} castShadow>
         <boxGeometry args={[3.4, 1.44, 0.1]} />
         <Mat c="#140d20" rough={0.5} />
@@ -400,13 +410,16 @@ function Calendar({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; o
       ctx.fillRect(0, 0, 420, 70)
       ctx.fillStyle = '#ffffff'
       ctx.font = '700 34px "Pixelify Sans", monospace'
-      ctx.fillText('NOV 2026', 24, 48)
-      const firstWeekday = 6
-      for (let day = 1; day <= 30; day++) {
+      const base = data.pilotDate ? new Date(`${data.pilotDate}T12:00:00`) : new Date()
+      ctx.fillText(`${MONTHS_UP[base.getMonth()]} ${base.getFullYear()}`, 24, 48)
+      const firstWeekday = (new Date(base.getFullYear(), base.getMonth(), 1).getDay() + 6) % 7
+      const daysIn = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate()
+      const pilotDay = data.pilotDate ? base.getDate() : -1
+      for (let day = 1; day <= daysIn; day++) {
         const idx = day - 1 + firstWeekday
         const x = 18 + (idx % 7) * 56
         const y = 88 + Math.floor(idx / 7) * 48
-        const isPilot = day === data.pilotDay
+        const isPilot = day === pilotDay
         ctx.fillStyle = isPilot ? pal.acc : 'rgba(40,20,70,.08)'
         ctx.fillRect(x, y, 48, 40)
         ctx.fillStyle = isPilot ? '#ffffff' : 'rgba(40,20,70,.7)'
@@ -414,10 +427,10 @@ function Calendar({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; o
         ctx.fillText(String(day), x + 10, y + 28)
       }
     },
-    [pal.paper, pal.acc, pal.acc2, data.pilotDay],
+    [pal.paper, pal.acc, pal.acc2, data.pilotDate],
   )
   return (
-    <Hot label="Calendario → Cronograma" at={[0.2, 3.1, 4.35]} onClick={onClick}>
+    <Hot label={data.links?.calendar ?? 'Calendario → Cronograma'} at={[0.2, 3.1, 4.35]} onClick={onClick}>
       <mesh position={[0.04, 2.2, 4.35]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <planeGeometry args={[1.4, 1.27]} />
         <meshStandardMaterial map={tex} roughness={0.9} />
@@ -445,15 +458,36 @@ function Window({ pal, bleepy }: { pal: ScenePalette; bleepy: boolean }) {
         }
       }
       if (bleepy) {
-        ctx.fillStyle = pal.acc2
+        const tail = ctx.createLinearGradient(60, 270, 330, 110)
+        tail.addColorStop(0, 'rgba(48,97,173,0)')
+        tail.addColorStop(0.7, 'rgba(101,141,185,.85)')
+        tail.addColorStop(1, 'rgba(226,229,178,1)')
+        ctx.strokeStyle = tail
+        ctx.lineCap = 'round'
+        ctx.lineWidth = 16
         ctx.beginPath()
-        ctx.arc(300, 170, 62, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.strokeStyle = '#ffd45c'
-        ctx.lineWidth = 9
-        ctx.beginPath()
-        ctx.ellipse(300, 170, 110, 26, -0.35, 0, Math.PI * 2)
+        ctx.moveTo(60, 270)
+        ctx.quadraticCurveTo(200, 210, 330, 110)
         ctx.stroke()
+        ctx.fillStyle = '#f36f2b'
+        ctx.shadowColor = '#f36f2b'
+        ctx.shadowBlur = 26
+        ctx.beginPath()
+        ctx.arc(336, 106, 17, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#e2e5b2'
+        ctx.beginPath()
+        ctx.moveTo(392, 60)
+        ctx.lineTo(399, 78)
+        ctx.lineTo(417, 85)
+        ctx.lineTo(399, 92)
+        ctx.lineTo(392, 110)
+        ctx.lineTo(385, 92)
+        ctx.lineTo(367, 85)
+        ctx.lineTo(385, 78)
+        ctx.closePath()
+        ctx.fill()
       } else if (pal.night) {
         ctx.fillStyle = '#f4e9c8'
         ctx.beginPath()
@@ -530,7 +564,7 @@ function Sign({ text, color, p, rot = 0, w = 3.2 }: { text: string; color: strin
   )
 }
 
-function Portal({ pal, bleepy, onClick }: { pal: ScenePalette; bleepy: boolean; onClick: () => void }) {
+function Portal({ pal, bleepy, label, onClick }: { pal: ScenePalette; bleepy: boolean; label: string; onClick: () => void }) {
   const inner = useRef<THREE.Mesh>(null)
   const tex = useCanvasTexture(
     400,
@@ -538,9 +572,9 @@ function Portal({ pal, bleepy, onClick }: { pal: ScenePalette; bleepy: boolean; 
     (ctx) => {
       const g = ctx.createRadialGradient(200, 200, 10, 200, 200, 200)
       g.addColorStop(0, '#ffffff')
-      g.addColorStop(0.18, bleepy ? '#ffd45c' : '#ff9a76')
-      g.addColorStop(0.45, bleepy ? '#7c5cff' : '#3dd6f5')
-      g.addColorStop(0.8, bleepy ? '#140f45' : '#5b2ee8')
+      g.addColorStop(0.18, bleepy ? '#e2e5b2' : '#ff9a76')
+      g.addColorStop(0.45, bleepy ? '#f36f2b' : '#3dd6f5')
+      g.addColorStop(0.8, bleepy ? '#3061ad' : '#5b2ee8')
       g.addColorStop(1, '#07051c')
       ctx.fillStyle = g
       ctx.fillRect(0, 0, 400, 400)
@@ -557,7 +591,7 @@ function Portal({ pal, bleepy, onClick }: { pal: ScenePalette; bleepy: boolean; 
     if (inner.current) inner.current.rotation.z += delta * 0.35
   })
   return (
-    <Hot label={bleepy ? 'Volver a Liiot HQ' : 'Entrar al universo Bleepy'} at={[0.25, 3.0, 7.1]} onClick={onClick}>
+    <Hot label={label} at={[0.25, 3.0, 7.1]} onClick={onClick}>
       <group position={[0.06, 0, 7.1]} rotation={[0, Math.PI / 2, 0]}>
         <mesh position={[0, 1.86, 0]}>
           <torusGeometry args={[0.86, 0.1, 12, 48, Math.PI]} />
@@ -666,10 +700,10 @@ function MeetingTable({ pal }: { pal: ScenePalette }) {
 /** Lugar de la escultura / cohete: al frente, donde no tapa el café ni a nadie desde la cámara. */
 const FEATURE = { x: 5.0, z: 8.25 }
 
-function ChromeSculpture({ pal, onClick }: { pal: ScenePalette; onClick: () => void }) {
+function ChromeSculpture({ pal, label, onClick }: { pal: ScenePalette; label: string; onClick: () => void }) {
   const { x, z } = FEATURE
   return (
-    <Hot label="Escultura · abrir Lanzamiento" at={[x, 2.6, z]} onClick={onClick}>
+    <Hot label={label} at={[x, 2.6, z]} onClick={onClick}>
       <Block p={[x, 0.3, z]} s={[0.9, 0.6, 0.9]} c={pal.trim} r={0.06} />
       <group position={[x, 1.45, z]}>
         <Float speed={2} rotationIntensity={0.6} floatIntensity={0.8}>
@@ -695,14 +729,14 @@ function ChromeSculpture({ pal, onClick }: { pal: ScenePalette; onClick: () => v
 }
 
 function Rocket({ pal, data, onClick }: { pal: ScenePalette; data: RoomData; onClick: () => void }) {
-  const fuel = data.blockingTotal ? data.blockingOk / data.blockingTotal : 0
+  const fuel = data.goalTotal ? data.goalOk / data.goalTotal : 0
   const flame = useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
     if (flame.current) flame.current.scale.y = 0.8 + Math.sin(clock.elapsedTime * 18) * 0.15
   })
   const { x, z } = FEATURE
   return (
-    <Hot label={`Cohete · ${data.blockingOk}/${data.blockingTotal} bloqueantes`} at={[x, 3.0, z]} onClick={onClick}>
+    <Hot label={data.links?.goal ?? `Cohete → Fases · ${data.goalOk}/${data.goalTotal} ${data.goalLabel}`} at={[x, 3.0, z]} onClick={onClick}>
       <Block p={[x, 0.08, z]} s={[1.5, 0.16, 1.5]} c={pal.metal} r={0.05} />
       <group position={[x, 0.25, z]}>
         <Float speed={1.4} rotationIntensity={0.08} floatIntensity={0.25}>
@@ -751,12 +785,13 @@ export interface RoomProps {
   pal: ScenePalette
   bleepy: boolean
   data: RoomData
-  go: (path: string) => void
-  toggleUniverse: () => void
+  /** Navega a una sección del proyecto: «tareas», «fases», «cronograma», «equipo». */
+  go: (sub: string) => void
+  goHome: () => void
   onHint: (label: string | null) => void
 }
 
-export function Room({ pal, bleepy, data, go, toggleUniverse, onHint }: RoomProps) {
+export function Room({ pal, bleepy, data, go, goHome, onHint }: RoomProps) {
   const ribbonA = useMemo<V3[]>(
     () => [
       [4.9, 3.05, 0.05],
@@ -782,15 +817,15 @@ export function Room({ pal, bleepy, data, go, toggleUniverse, onHint }: RoomProp
       <Floor pal={pal} />
       <Walls pal={pal} />
       <Window pal={pal} bleepy={bleepy} />
-      <Board pal={pal} data={data} onClick={() => go('/tareas')} />
-      <Tv data={data} onClick={() => go('/equipo')} />
-      <Calendar pal={pal} data={data} onClick={() => go('/cronograma')} />
-      <Sign text={bleepy ? 'ESTACIÓN BLEEPY' : 'LIIOT HQ'} color={pal.neonA} p={[bleepy ? 2.75 : 2.15, 3.03, 0.08]} w={bleepy ? 3.4 : 2.6} />
+      <Board pal={pal} data={data} onClick={() => go('tareas')} />
+      <Tv pal={pal} data={data} onClick={() => go('equipo')} />
+      <Calendar pal={pal} data={data} onClick={() => go('cronograma')} />
+      <Sign text={bleepy ? 'BLEEPY' : 'LIIOT'} color={pal.neonA} p={[bleepy ? 2.0 : 2.15, 3.03, 0.08]} w={bleepy ? 2.6 : 2.6} />
       <NeonRibbon points={ribbonA} colors={[pal.neonA, pal.acc3, pal.neonB]} />
       <NeonRibbon points={ribbonB} colors={[pal.neonB, pal.neonA, pal.acc3]} radius={0.028} />
-      <Portal pal={pal} bleepy={bleepy} onClick={toggleUniverse} />
+      <Portal pal={pal} bleepy={bleepy} label={data.links?.portal ?? 'Portal · volver a Liiot'} onClick={goHome} />
       {Object.keys(DESKS).map((id) => (
-        <Desk key={id} id={id} pal={pal} onClick={() => go(`/yo?persona=${id}`)} />
+        <Desk key={id} id={id} pal={pal} label={data.links?.desk ?? 'Escritorio → Equipo'} onClick={() => go('equipo')} />
       ))}
       <Coffee pal={pal} />
       <MeetingTable pal={pal} />
@@ -799,7 +834,7 @@ export function Room({ pal, bleepy, data, go, toggleUniverse, onHint }: RoomProp
       <Plant p={[0.7, 0, 0.65]} s={1.25} />
       <Plant p={[0.8, 0, 8.45]} s={0.7} />
       <Plant p={[11.4, 0, 8.4]} s={0.85} />
-      {bleepy ? <Rocket pal={pal} data={data} onClick={() => go('/lanzamiento')} /> : <ChromeSculpture pal={pal} onClick={() => go('/lanzamiento')} />}
+      {bleepy ? <Rocket pal={pal} data={data} onClick={() => go('fases')} /> : <ChromeSculpture pal={pal} label={data.links?.goal ?? 'Escultura → Fases'} onClick={() => go('fases')} />}
       {bleepy && <Sparkles count={70} scale={[12, 3, 9]} position={[6, 2, 4.5]} size={2.5} speed={0.25} color={pal.acc3} />}
       {pal.night &&
         Object.values(DESKS).map((d) => <pointLight key={d.cx} position={[d.cx, 1.7, 3.3]} color="#ffb27a" intensity={3} distance={3.6} />)}

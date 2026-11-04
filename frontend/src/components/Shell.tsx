@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
   ChartGantt,
-  Check,
-  ChevronDown,
-  FolderPlus,
+  ChevronLeft,
+  FolderOpen,
+  Layers,
+  LogOut,
   Moon,
-  Orbit,
   Plus,
-  Rocket,
   Search,
   Send,
   Settings,
@@ -17,65 +17,66 @@ import {
   SquareKanban,
   Sun,
   SunMoon,
+  UserRound,
   Users,
   WifiOff,
 } from 'lucide-react'
-import { OFFLINE_MESSAGE, useCurrentProject } from '../api'
+import { api, APP_NAME, OFFLINE_MESSAGE, qk, useMe } from '../api'
 import { usePrefs } from '../prefs'
 import { useUI } from '../ui'
-import { MemberHead, useMemberMap } from './bits'
+import type { World } from '../world'
+import { Background, Isotipo, ProjectMark } from './Brand'
+import { MemberHead } from './bits'
 
-const NAV = [
-  { to: '/', label: 'Oficina', icon: Building2, end: true },
-  { to: '/yo', label: 'Mi espacio', icon: Sparkles },
-  { to: '/tareas', label: 'Tareas', icon: SquareKanban },
-  { to: '/lanzamiento', label: 'Lanzar', icon: Rocket },
-  { to: '/cronograma', label: 'Cronograma', icon: ChartGantt },
-  { to: '/equipo', label: 'Equipo', icon: Users },
-  { to: '/seguimiento', label: 'Seguimiento', icon: Send },
+const PROJECT_NAV = [
+  { sub: '', label: 'Oficina', icon: Building2, end: true },
+  { sub: 'tareas', label: 'Tareas', icon: SquareKanban },
+  { sub: 'fases', label: 'Fases', icon: Layers },
+  { sub: 'cronograma', label: 'Cronograma', icon: ChartGantt },
 ]
-
+const SHARED_NAV = [
+  { sub: 'yo', label: 'Mi espacio', icon: Sparkles },
+  { sub: 'equipo', label: 'Equipo', icon: Users },
+  { sub: 'seguimiento', label: 'Seguimiento', icon: Send },
+]
 const TITLES: Record<string, string> = {
-  '/': 'Oficina',
-  '/yo': 'Mi espacio',
-  '/tareas': 'Tareas',
-  '/lanzamiento': 'Lanzamiento',
-  '/cronograma': 'Cronograma',
-  '/equipo': 'Carga del equipo',
-  '/seguimiento': 'Seguimiento por Telegram',
-  '/ajustes': 'Ajustes',
+  '': 'Oficina',
+  oficina: 'Oficina',
+  tareas: 'Tareas',
+  fases: 'Fases del proyecto',
+  cronograma: 'Cronograma',
+  yo: 'Mi espacio',
+  equipo: 'Equipo',
+  seguimiento: 'Seguimiento',
+  ajustes: 'Ajustes',
 }
 
-export function Isotipo({ className }: { className?: string }) {
+/** Aviso cuando se pierde la conexión por más de unos segundos (al abrir no parpadea). */
+function OfflineBanner({ live }: { live: boolean }) {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (live) {
+      setShow(false)
+      return
+    }
+    const t = window.setTimeout(() => setShow(true), 5000)
+    return () => window.clearTimeout(t)
+  }, [live])
+  if (!show) return null
   return (
-    <svg className={className} viewBox="56 20 80 154" aria-hidden="true">
-      <path d="M94.65,148.81l.1-83.16c0-3.67-4.17-5.77-7.08-3.55-8.65,6.57-17.3,13.13-25.95,19.7-1.1.84-1.75,2.14-1.76,3.53-.09,26.84-.19,53.68-.28,80.52-.01,3.53,3.88,5.67,6.82,3.74,8.71-5.69,17.43-11.37,26.14-17.06,1.25-.82,2.01-2.22,2.01-3.73" />
-      <path d="M97.86,45.02l-.1,83.16c0,3.67,4.17,5.77,7.08,3.55,8.65-6.57,17.3-13.13,25.95-19.7,1.1-.84,1.75-2.14,1.76-3.53.09-26.84.19-53.68.28-80.52.01-3.53-3.88-5.67-6.82-3.74-8.71,5.69-17.43,11.37-26.14,17.06-1.25.82-2.01,2.22-2.01,3.73" />
-      <path d="M132.57,152.85c0,9.17-7.55,16.6-16.86,16.6s-17.68-7.79-17.68-17.4v-16.02h17.45c9.44,0,17.1,7.54,17.1,16.83" />
-      <path d="M59.94,40.98c0-9.17,7.55-16.6,16.86-16.6s17.68,7.79,17.68,17.4v16.03h-17.45c-9.44,0-17.1-7.54-17.1-16.83" />
-    </svg>
+    <div className="offline-banner" role="alert">
+      <WifiOff size={18} aria-hidden />
+      <span>
+        <b>{APP_NAME} está desconectado.</b> {OFFLINE_MESSAGE.replace(`No hay conexión con ${APP_NAME}. `, '')} Mientras tanto los cambios no se guardan.
+      </span>
+    </div>
   )
 }
 
-export function Background() {
-  return (
-    <>
-      <div className="bg" aria-hidden="true">
-        <i className="b1" />
-        <i className="b2" />
-        <i className="b3" />
-        <i className="ribbon" />
-        <i className="ribbon r2" />
-      </div>
-      <div className="grain" aria-hidden="true" />
-    </>
-  )
-}
-
-/** Selector del proyecto con el que se trabaja: Tareas, Lanzar y Cronograma muestran solo ese proyecto. */
-function ProjectSwitcher() {
-  const { project, projects, setProject } = useCurrentProject()
-  const { openNewProject } = useUI()
+function AccountMenu() {
+  const me = useMe()
+  const qc = useQueryClient()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -89,49 +90,40 @@ function ProjectSwitcher() {
       window.removeEventListener('keydown', esc)
     }
   }, [open])
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout')
+    } finally {
+      qc.clear()
+      qc.invalidateQueries({ queryKey: qk.auth })
+      navigate('/')
+    }
+  }
   return (
-    <div className="project-switch" ref={box}>
-      <button type="button" className="project-chip" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} title="Cambiar de proyecto">
-        <span className="pdot" style={{ background: project?.color ?? 'var(--acc)' }} />
-        <span>
-          <small>Proyecto</small>
-          <b>{project?.name ?? 'Cargando…'}</b>
-        </span>
-        <ChevronDown size={16} aria-hidden />
+    <div className="account" ref={box}>
+      <button type="button" className="account-btn" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label="Mi cuenta">
+        <MemberHead member={me} size={36} />
       </button>
       {open && (
-        <div className="project-menu panel" role="menu">
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={p.id === project?.id}
-              onClick={() => {
-                setProject(p.id)
-                setOpen(false)
-              }}
-            >
-              <span className="pdot" style={{ background: p.color }} />
-              <span className="grow">
-                <b>{p.name}</b>
-                <small>
-                  {p.keyPrefix} · {p.counts ? `${p.counts.open} abiertas de ${p.counts.total}` : 'sin tareas'}
-                </small>
-              </span>
-              {p.id === project?.id && <Check size={16} aria-hidden />}
-            </button>
-          ))}
-          <button
-            type="button"
-            role="menuitem"
-            className="new"
-            onClick={() => {
-              setOpen(false)
-              openNewProject()
-            }}
-          >
-            <FolderPlus size={17} aria-hidden /> Nuevo proyecto
+        <div className="menu panel" role="menu">
+          <div className="menu-who">
+            <MemberHead member={me} size={40} />
+            <span>
+              <b>{me.fullName || me.name}</b>
+              <small>
+                {me.role}
+                {me.isAdmin ? ' · administra' : ''}
+              </small>
+            </span>
+          </div>
+          <button type="button" role="menuitem" onClick={() => (setOpen(false), navigate('/yo'))}>
+            <Sparkles size={16} /> Mi espacio
+          </button>
+          <button type="button" role="menuitem" onClick={() => (setOpen(false), navigate('/ajustes'))}>
+            <UserRound size={16} /> Mi perfil y cuenta
+          </button>
+          <button type="button" role="menuitem" className="danger" onClick={logout}>
+            <LogOut size={16} /> Cerrar sesión
           </button>
         </div>
       )}
@@ -139,55 +131,64 @@ function ProjectSwitcher() {
   )
 }
 
-/** Aviso cuando se pierde la conexión con HQ por más de unos segundos (al abrir no parpadea). */
-function OfflineBanner({ live }: { live: boolean }) {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    if (live) {
-      setShow(false)
-      return
-    }
-    const t = window.setTimeout(() => setShow(true), 4000)
-    return () => window.clearTimeout(t)
-  }, [live])
-  if (!show) return null
-  return (
-    <div className="offline-banner" role="alert">
-      <WifiOff size={18} aria-hidden />
-      <span>
-        <b>HQ está desconectado.</b> {OFFLINE_MESSAGE.replace('No hay conexión con HQ. ', '')} Mientras tanto los cambios no se guardan.
-      </span>
-    </div>
-  )
-}
-
-export function Shell({ children, live }: { children: ReactNode; live: boolean }) {
-  const { me, mode, setMode, uni, setUni } = usePrefs()
-  const members = useMemberMap()
-  const { openCreate } = useUI()
-  const { projectId } = useCurrentProject()
+export function Shell({ children, live, world }: { children: ReactNode; live: boolean; world: World }) {
+  const me = useMe()
+  const { mode, setMode } = usePrefs()
+  const { openCreate, goWorld } = useUI()
   const navigate = useNavigate()
-  const location = useLocation()
+  const { pathname } = useLocation()
   const [q, setQ] = useState('')
   const nextMode = mode === 'dark' ? 'light' : mode === 'light' ? 'auto' : 'dark'
   const ModeIcon = mode === 'dark' ? Moon : mode === 'light' ? Sun : SunMoon
+  const sub = (world.projectId ? pathname.replace(/^\/p\/[^/]+\/?/, '') : pathname.replace(/^\//, '')).split('/')[0]
+  const project = world.project
+  const inProject = Boolean(world.projectId)
 
   return (
     <>
-      <Background />
-      <div className="app">
+      <Background theme={world.theme} />
+      <div className={`app${inProject ? ' in-project' : ''}`}>
         <nav className="rail" aria-label="Secciones">
-          <div className="rail-logo" title="Liiot HQ">
-            <Isotipo />
-          </div>
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? 'active' : undefined)}>
+          {inProject ? (
+            <>
+              <button type="button" className="rail-back" onClick={() => goWorld('/', null)} title="Volver a Liiot">
+                <ChevronLeft size={14} aria-hidden /> Liiot
+              </button>
+              <div className="rail-logo world" title={project?.name}>
+                {project ? <ProjectMark project={project} /> : null}
+              </div>
+              {PROJECT_NAV.map(({ sub: s, label, icon: Icon, end }) => (
+                <NavLink key={label} to={world.path(s)} end={end} className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                  <Icon size={21} aria-hidden />
+                  {label}
+                </NavLink>
+              ))}
+              <span className="rail-sep" />
+            </>
+          ) : (
+            <>
+              <NavLink to="/" end className="rail-logo" title={APP_NAME}>
+                <Isotipo />
+              </NavLink>
+              <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                <FolderOpen size={21} aria-hidden />
+                Proyectos
+              </NavLink>
+              <NavLink to="/oficina" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                <Building2 size={21} aria-hidden />
+                Oficina
+              </NavLink>
+              <span className="rail-sep" />
+            </>
+          )}
+          {SHARED_NAV.map(({ sub: s, label, icon: Icon }) => (
+            <NavLink key={label} to={world.path(s)} className={({ isActive }) => (isActive ? 'active' : undefined)}>
               <Icon size={21} aria-hidden />
               {label}
             </NavLink>
           ))}
           <span className="spacer" />
-          <NavLink to="/ajustes" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+          <NavLink to={world.path('ajustes')} className={({ isActive }) => (isActive ? 'active' : undefined)}>
             <Settings size={20} aria-hidden />
             Ajustes
           </NavLink>
@@ -197,30 +198,42 @@ export function Shell({ children, live }: { children: ReactNode; live: boolean }
         </nav>
         <div className="main">
           <header className="topbar">
-            <ProjectSwitcher />
-            <button
-              type="button"
-              className="btn icon"
-              onClick={() => setUni(uni === 'liiot' ? 'bleepy' : 'liiot')}
-              title={uni === 'bleepy' ? 'Volver al universo Liiot' : 'Cambiar al universo visual Bleepy'}
-              aria-label="Cambiar de universo visual"
-            >
-              <Orbit size={18} />
-            </button>
-            <span className="page-title">{TITLES[location.pathname] ?? ''}</span>
-            <form
-              className="search"
-              role="search"
-              onSubmit={(e) => {
-                e.preventDefault()
-                navigate(`/tareas?q=${encodeURIComponent(q)}`)
-              }}
-            >
-              <Search size={16} aria-hidden />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tareas…" aria-label="Buscar tareas" />
-              <kbd>ENTER</kbd>
-            </form>
-            <button type="button" className="btn primary" onClick={() => openCreate({ ownerId: me ?? undefined, projectId })}>
+            {inProject ? (
+              <button type="button" className="world-chip" onClick={() => goWorld('/', null)} title="Volver a todos los proyectos">
+                <span className="world-mark">{project && <ProjectMark project={project} />}</span>
+                <span>
+                  <small>{project?.currentPhaseName ? `Fase · ${project.currentPhaseName}` : 'Proyecto'}</small>
+                  <b>{project?.name ?? '…'}</b>
+                </span>
+              </button>
+            ) : (
+              <span className="world-chip static">
+                <span className="world-mark liiot">
+                  <Isotipo />
+                </span>
+                <span>
+                  <small>Empresa</small>
+                  <b>Liiot</b>
+                </span>
+              </span>
+            )}
+            <span className="page-title">{sub === '' && !inProject ? 'Proyectos' : TITLES[sub] ?? ''}</span>
+            {inProject ? (
+              <form
+                className="search"
+                role="search"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  navigate(`${world.path('tareas')}?q=${encodeURIComponent(q)}`)
+                }}
+              >
+                <Search size={16} aria-hidden />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Buscar en ${project?.name ?? 'el proyecto'}…`} aria-label="Buscar tareas" />
+              </form>
+            ) : (
+              <span className="grow" />
+            )}
+            <button type="button" className="btn primary" onClick={() => openCreate({ ownerId: me.id, projectId: world.projectId ?? undefined })}>
               <Plus size={17} aria-hidden /> Nueva tarea
             </button>
             <button
@@ -232,9 +245,7 @@ export function Shell({ children, live }: { children: ReactNode; live: boolean }
             >
               <ModeIcon size={18} />
             </button>
-            <button type="button" className="btn icon" style={{ padding: 0, border: 0, background: 'none', boxShadow: 'none' }} onClick={() => navigate('/yo')} aria-label="Mi espacio">
-              <MemberHead member={me ? members[me] : undefined} size={38} />
-            </button>
+            <AccountMenu />
           </header>
           <OfflineBanner live={live} />
           {children}

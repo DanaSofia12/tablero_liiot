@@ -13,6 +13,18 @@ export function Toasts() {
           <div key={t.id} className={`toast ${t.tone}`} role="status">
             <Icon size={18} style={{ color: t.tone === 'bad' ? 'var(--bad)' : 'var(--acc)' }} />
             <span className="grow">{t.text}</span>
+            {t.action && (
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => {
+                  t.action?.run()
+                  dismiss(t.id)
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <button type="button" className="btn icon sm ghost" onClick={() => dismiss(t.id)} aria-label="Cerrar aviso">
               <X size={14} />
             </button>

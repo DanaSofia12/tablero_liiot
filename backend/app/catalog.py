@@ -1,4 +1,6 @@
-"""Catálogos fijos: tipos de tarea, estados, prioridades y ajustes por defecto."""
+"""Catálogos fijos: tipos de tarea, estados, prioridades, estados de la oficina y ajustes por defecto."""
+
+APP_NAME = "Liiot Hub"
 
 TASK_TYPES = [
     {"id": "negocio", "label": "Negocio", "icon": "handshake", "color": "#E2B31C", "activity": "Habla por teléfono"},
@@ -12,34 +14,56 @@ TASK_TYPES = [
 ]
 TYPE_BY_ID = {item["id"]: item for item in TASK_TYPES}
 
-STATUSES = ["por_hacer", "en_progreso", "en_revision", "bloqueada", "hecha"]
+STATUSES = ["pendiente", "en_progreso", "en_pausa", "pruebas", "finalizada"]
+DONE = "finalizada"
+PAUSED = "en_pausa"
 STATUS_LABEL = {
-    "por_hacer": "Por hacer",
+    "pendiente": "Pendiente",
     "en_progreso": "En progreso",
-    "en_revision": "En revisión",
-    "bloqueada": "Bloqueada",
-    "hecha": "Hecha",
+    "en_pausa": "En pausa",
+    "pruebas": "Pruebas",
+    "finalizada": "Finalizada",
 }
+# Estados de versiones anteriores (y de otras herramientas) → estado actual
+LEGACY_STATUS = {"por_hacer": "pendiente", "en_revision": "pruebas", "bloqueada": "en_pausa", "hecha": "finalizada"}
+
 PRIORITIES = ["P0", "P1", "P2", "P3"]
 PRIORITY_LABEL = {"P0": "Crítica", "P1": "Alta", "P2": "Media", "P3": "Baja"}
-EFFORT_POINTS = {"S": 1, "M": 2, "L": 3}
+PRIORITY_COLOR = {"P0": "#F0445B", "P1": "#FF7A2F", "P2": "#F5B83D", "P3": "#3FBF8A"}
+PRIORITY_WORDS = {"critica": "P0", "crítica": "P0", "alta": "P1", "media": "P2", "baja": "P3"}
+
 CRITERION_STATES = ["pendiente", "cumple", "parcial", "no_cumple"]
-PRESENCE_OVERRIDES = ["reunion", "foco", "fuera", "disponible"]
+PHASE_STATUSES = ["pendiente", "en_curso", "completada"]
+
+# Lo que muestra la oficina: solo estos cuatro
+PRESENCE_STATES = ["trabajando", "en_reunion", "disponible", "descansando"]
+PRESENCE_LABEL = {"trabajando": "Trabajando", "en_reunion": "En reunión", "disponible": "Disponible", "descansando": "Descansando"}
+
 WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
 # weeklyDay usa la convención de Python: 0 = lunes … 5 = sábado, 6 = domingo.
 DEFAULT_TELEGRAM = {
     "groupChatId": None,
     "groupTitle": None,
-    "weeklyEnabled": True,
-    "weeklyDay": 5,
-    "weeklyTime": "18:00",
+    # Chat del equipo
+    "groupNewTasks": True,
+    "groupCelebrations": True,
+    "groupTesting": True,
+    "groupCountdown": True,
+    "groupOverdue": True,
+    "groupPhases": True,
+    "groupBlockers": False,
+    "groupWeeklySummary": True,
+    "groupTime": "08:30",
+    # Chat personal
+    "dailyCheckin": True,
     "dueReminders": True,
     "dueTime": "09:00",
     "blockerAlerts": True,
-    "groupWeeklySummary": True,
-    "groupCelebrations": True,
-    "groupBlockers": False,
-    "ceoId": "dana",
     "maxDaily": 3,
+    # Repaso semanal
+    "weeklyEnabled": True,
+    "weeklyDay": 5,
+    "weeklyTime": "18:00",
+    "ceoId": "dana",
 }

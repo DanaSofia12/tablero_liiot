@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, Download, Palette, RefreshCw, UserRound } from 'lucide-react'
-import { api, qk, useRefresh, useVault } from '../api'
+import { BookOpen, Copy, Download, KeyRound, Palette, RefreshCw, ShieldCheck, UserPlus, UserRound, Users } from 'lucide-react'
+import { api, qk, useAccounts, useMe, useRefresh, useVault } from '../api'
 import { fmtMoment } from '../lib/format'
-import type { VaultStatus } from '../types'
+import type { Account, AvatarCfg, HairStyle, Member, OuterStyle, VaultStatus } from '../types'
 import { Avatar } from '../components/Avatar'
 import { MemberHead, Panel, Toggle, useMemberMap } from '../components/bits'
-import { usePrefs, type Mode, type Universe } from '../prefs'
+import { usePrefs, type Mode } from '../prefs'
 import { useUI } from '../ui'
-import type { AvatarCfg, HairStyle, Member, OuterStyle } from '../types'
 
 const HAIR: { v: HairStyle; label: string }[] = [
   { v: 'wolf', label: 'Largo en capas' },
+  { v: 'long', label: 'Largo liso' },
   { v: 'bowl', label: 'Liso con flequillo' },
   { v: 'wavy', label: 'Corto ondulado' },
-  { v: 'long', label: 'Largo liso' },
   { v: 'short', label: 'Corto' },
   { v: 'bun', label: 'Moño' },
 ]
@@ -26,126 +25,291 @@ const OUTER: { v: OuterStyle; label: string }[] = [
 const HAIR_COLORS = ['#16121C', '#2B1E18', '#4A2E1E', '#7A4A2B', '#C98A5B', '#E8C27A', '#8B45CC', '#FF6A33']
 const SKINS = ['#F7D9C6', '#F0C9AD', '#E8BD9C', '#D9A27E', '#B57A55', '#8A5638', '#5E3A26']
 const CLOTHES = ['#F4F1F6', '#1D1A22', '#5E5B3D', '#7F97B5', '#8B45CC', '#FF6A33', '#E04B66', '#E2B31C', '#34D399', '#60A5FA']
+const DAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+const DAY_NAMES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
 export default function SettingsPage() {
-  const { me, setMe, mode, setMode, uni, setUni, pixel, setPixel, ignoreHours, setIgnoreHours, calm, setCalm } = usePrefs()
+  const me = useMe()
   const members = useMemberMap()
-  const [editing, setEditing] = useState<string>(me ?? 'dana')
+  const [editing, setEditing] = useState<string>(me.id)
   const person = members[editing]
 
   return (
-    <div className="page">
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">Personalización</p>
-          <h1>Ajustes</h1>
-          <p>Tu avatar, cómo se ve HQ y quién eres en este navegador.</p>
-        </div>
-      </div>
+    <div className="page settings">
       <div className="settings-grid">
-        <Panel title="Avatares" icon={<UserRound size={18} style={{ color: 'var(--acc)' }} />}>
-          <div className="seg" style={{ marginBottom: 14 }} role="group" aria-label="Persona">
-            {Object.values(members).map((m) => (
-              <button key={m.id} type="button" aria-pressed={editing === m.id} onClick={() => setEditing(m.id)}>
-                <MemberHead member={m} size={22} /> {m.name}
-              </button>
-            ))}
-          </div>
-          {person && <AvatarEditor key={person.id} member={person} />}
-        </Panel>
-
-        <div className="stack" style={{ gap: 16 }}>
-          <ObsidianPanel />
-          <Panel title="Apariencia" icon={<Palette size={18} style={{ color: 'var(--acc-2)' }} />}>
-            <div className="setting">
-              <div className="txt">
-                <b>Modo</b>
-                <span>Automático: oscuro de 6 p. m. a 6 a. m.</span>
-              </div>
-              <div className="seg">
-                {(
-                  [
-                    ['dark', 'Oscuro'],
-                    ['light', 'Claro'],
-                    ['auto', 'Automático'],
-                  ] as [Mode, string][]
-                ).map(([v, label]) => (
-                  <button key={v} type="button" aria-pressed={mode === v} onClick={() => setMode(v)}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="setting">
-              <div className="txt">
-                <b>Universo</b>
-                <span>Bleepy usa un tema provisional «planeta creativo» hasta la identidad de Saray.</span>
-              </div>
-              <div className="seg">
-                {(
-                  [
-                    ['liiot', 'Liiot HQ'],
-                    ['bleepy', 'Bleepy'],
-                  ] as [Universe, string][]
-                ).map(([v, label]) => (
-                  <button key={v} type="button" aria-pressed={uni === v} onClick={() => setUni(v)}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="setting">
-              <div className="txt">
-                <b>Modo pixel en la oficina</b>
-                <span>Pixela la escena 3D, como un videojuego retro.</span>
-              </div>
-              <Toggle checked={pixel} onChange={setPixel} label="Modo pixel" />
-            </div>
-            <div className="setting">
-              <div className="txt">
-                <b>Ver estados aunque sea fuera de horario</b>
-                <span>Si lo apagas, fuera del horario de cada persona su avatar duerme en el sofá.</span>
-              </div>
-              <Toggle checked={ignoreHours} onChange={setIgnoreHours} label="Ignorar horario" />
-            </div>
-            <div className="setting">
-              <div className="txt">
-                <b>Menos movimiento</b>
-                <span>Quieta el fondo y el grano.</span>
-              </div>
-              <Toggle checked={calm} onChange={setCalm} label="Menos movimiento" />
-            </div>
+        <div className="settings-col">
+          <Panel
+            title={editing === me.id ? 'Mi perfil' : `Perfil de ${person?.name ?? ''}`}
+            icon={<UserRound size={18} className="acc" />}
+            actions={
+              me.isAdmin ? (
+                <div className="seg" role="group" aria-label="Persona">
+                  {Object.values(members).map((m) => (
+                    <button key={m.id} type="button" aria-pressed={editing === m.id} onClick={() => setEditing(m.id)} title={m.name}>
+                      <MemberHead member={m} size={20} />
+                    </button>
+                  ))}
+                </div>
+              ) : undefined
+            }
+          >
+            {person && <ProfileEditor key={person.id} member={person} />}
           </Panel>
+          <AppearancePanel />
+        </div>
 
-          <Panel title="¿Quién usa este navegador?">
-            <div className="people-pick">
-              {Object.values(members).map((m) => (
-                <button key={m.id} type="button" aria-pressed={me === m.id} onClick={() => setMe(m.id)}>
-                  <MemberHead member={m} size={26} /> {m.name} · {m.role}
-                </button>
-              ))}
-            </div>
-            <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-              HQ corre en local y sin contraseñas. Cuando sea intranet se agrega inicio de sesión.
-            </p>
-          </Panel>
-
-          <Panel title="Datos">
-            <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-              Copia completa en JSON de todos los proyectos: tareas, bitácora, rúbricas, revisiones y ajustes. Sirve de respaldo.
-            </p>
-            <a className="btn" href="/api/export" download>
-              <Download size={15} /> Descargar copia
-            </a>
-          </Panel>
+        <div className="settings-col">
+          <AccountPanel />
+          {me.isAdmin && <AccessPanel />}
+          <ObsidianPanel admin={me.isAdmin} />
+          {me.isAdmin && (
+            <Panel title="Copia de seguridad" icon={<Download size={18} className="acc" />}>
+              <p className="muted small" style={{ marginBottom: 12 }}>
+                Todo en un archivo: proyectos, fases, tareas, bitácora, rúbricas y ajustes. Guárdalo de vez en cuando.
+              </p>
+              <a className="btn" href="/api/export" download>
+                <Download size={15} /> Descargar copia
+              </a>
+            </Panel>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
+function AccountPanel() {
+  const me = useMe()
+  const { toast } = useUI()
+  const refresh = useRefresh()
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [account, setAccount] = useState({ username: me.username ?? '', email: me.email ?? '', password: '' })
+  const [editing, setEditing] = useState(false)
+  return (
+    <Panel title="Mi cuenta" icon={<KeyRound size={18} className="acc" />}>
+      {!editing ? (
+        <div className="account-info">
+          <span>
+            <small>Usuario</small>
+            <b>{me.username}</b>
+          </span>
+          <span>
+            <small>Correo</small>
+            <b>{me.email}</b>
+          </span>
+          <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+            Cambiar
+          </button>
+        </div>
+      ) : (
+        <form
+          className="stack"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await api.patch('/api/auth/account', account)
+              refresh(qk.auth, qk.members)
+              setEditing(false)
+              setAccount((a) => ({ ...a, password: '' }))
+              toast('Cuenta actualizada')
+            } catch (err) {
+              toast((err as Error).message, 'bad')
+            }
+          }}
+        >
+          <div className="fields">
+            <label className="field">
+              <span>Usuario</span>
+              <input className="input" value={account.username} onChange={(e) => setAccount({ ...account, username: e.target.value.toLowerCase().replace(/\s/g, '') })} autoComplete="username" />
+            </label>
+            <label className="field">
+              <span>Correo</span>
+              <input className="input" type="email" value={account.email} onChange={(e) => setAccount({ ...account, email: e.target.value })} autoComplete="email" />
+            </label>
+          </div>
+          <label className="field">
+            <span>Confirma con tu contraseña</span>
+            <input className="input" type="password" value={account.password} onChange={(e) => setAccount({ ...account, password: e.target.value })} autoComplete="current-password" />
+          </label>
+          <div className="row">
+            <button type="submit" className="btn primary sm" disabled={!account.password}>
+              Guardar
+            </button>
+            <button type="button" className="btn ghost sm" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+      <div className="divider" />
+      <form
+        className="stack"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          if (next !== confirm) return toast('Las dos contraseñas nuevas no coinciden', 'bad')
+          try {
+            await api.post('/api/auth/password', { current, password: next })
+            setCurrent('')
+            setNext('')
+            setConfirm('')
+            toast('Contraseña cambiada. Se cerraron tus otras sesiones.')
+          } catch (err) {
+            toast((err as Error).message, 'bad')
+          }
+        }}
+      >
+        <span className="field-label">Cambiar contraseña</span>
+        <input className="input" type="password" placeholder="Contraseña actual" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        <div className="fields">
+          <input className="input" type="password" placeholder="Nueva (mínimo 8)" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+          <input className="input" type="password" placeholder="Repite la nueva" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+        </div>
+        <button type="submit" className="btn sm" style={{ justifySelf: 'start' }} disabled={!current || next.length < 8}>
+          Cambiar contraseña
+        </button>
+      </form>
+    </Panel>
+  )
+}
+
+function CodeBox({ code, name, kind, onClose }: { code: string; name: string; kind: string; onClose: () => void }) {
+  const { toast } = useUI()
+  const text = `Hola ${name}: entra a Liiot Hub, toca «Tengo un código de invitación» y escribe ${code}. Vale una sola vez.`
+  return (
+    <div className="code-box">
+      <span className="field-label">{kind === 'activar' ? `Código para que ${name} active su cuenta` : `Código para que ${name} elija una contraseña nueva`}</span>
+      <b className="code">{code}</b>
+      <p className="muted small">Compártelo solo con {name}, por un canal privado. {kind === 'activar' ? 'Vale 7 días.' : 'Vale 24 horas.'} Este código no se vuelve a mostrar.</p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn sm"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(text)
+              toast('Mensaje copiado con el código')
+            } catch {
+              toast(text, 'info')
+            }
+          }}
+        >
+          <Copy size={13} /> Copiar mensaje
+        </button>
+        <button type="button" className="btn sm ghost" onClick={onClose}>
+          Listo
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AccessPanel() {
+  const me = useMe()
+  const accounts = useAccounts(me.isAdmin).data ?? []
+  const refresh = useRefresh()
+  const { toast } = useUI()
+  const [shown, setShown] = useState<{ id: string; code: string; kind: string } | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [person, setPerson] = useState({ name: '', role: '', isAdmin: false })
+  const act = async (fn: () => Promise<unknown>, ok?: string) => {
+    try {
+      const res = await fn()
+      refresh(qk.accounts, qk.members)
+      if (ok) toast(ok)
+      return res
+    } catch (e) {
+      toast((e as Error).message, 'bad')
+      return null
+    }
+  }
+  return (
+    <Panel
+      title="Personas y accesos"
+      icon={<Users size={18} className="acc" />}
+      actions={
+        <button type="button" className="btn sm" onClick={() => setAdding(!adding)}>
+          <UserPlus size={14} /> Agregar persona
+        </button>
+      }
+    >
+      {adding && (
+        <form
+          className="add-person"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            if (!person.name.trim()) return
+            const res = (await act(() => api.post<{ member: Account; code: string }>('/api/accounts', person), `${person.name} quedó registrada`)) as { member: Account; code: string } | null
+            if (res) {
+              setShown({ id: res.member.id, code: res.code, kind: 'activar' })
+              setPerson({ name: '', role: '', isAdmin: false })
+              setAdding(false)
+            }
+          }}
+        >
+          <div className="fields">
+            <input className="input" placeholder="Nombre completo" value={person.name} onChange={(e) => setPerson({ ...person, name: e.target.value })} autoFocus />
+            <input className="input" placeholder="Rol, por ejemplo Diseño" value={person.role} onChange={(e) => setPerson({ ...person, role: e.target.value })} />
+          </div>
+          <label className="row small" style={{ gap: 8 }}>
+            <Toggle checked={person.isAdmin} onChange={(v) => setPerson({ ...person, isAdmin: v })} label="Administra" /> También puede administrar Liiot Hub
+          </label>
+          <button type="submit" className="btn primary sm" disabled={!person.name.trim()}>
+            Registrar y crear su código
+          </button>
+        </form>
+      )}
+      {accounts.map((a) => (
+        <div key={a.id} className="access-row">
+          <MemberHead member={a} size={34} />
+          <div className="grow">
+            <b>
+              {a.name} {a.isAdmin && <ShieldCheck size={13} className="acc" aria-label="Administra" />}
+            </b>
+            <small className={a.hasAccount && a.active ? 'ok' : 'muted'}>
+              {!a.active
+                ? 'Cuenta desactivada'
+                : a.hasAccount
+                  ? `Activa · @${a.username}${a.lastLoginAt ? ` · entró ${fmtMoment(a.lastLoginAt)}` : ''}`
+                  : a.pendingCode
+                    ? 'Tiene un código sin usar'
+                    : 'Aún sin cuenta'}
+            </small>
+          </div>
+          <button
+            type="button"
+            className="btn sm"
+            onClick={async () => {
+              const res = (await act(() => api.post<{ code: string; kind: string }>(`/api/accounts/${a.id}/code`))) as { code: string; kind: string } | null
+              if (res) setShown({ id: a.id, code: res.code, kind: res.kind })
+            }}
+            title={a.hasAccount ? 'Código para que elija una contraseña nueva' : 'Código para que active su cuenta'}
+          >
+            <KeyRound size={13} /> {a.hasAccount ? 'Nueva contraseña' : 'Código de acceso'}
+          </button>
+          {a.id !== me.id && (
+            <details className="more">
+              <summary aria-label={`Más opciones para ${a.name}`}>···</summary>
+              <div className="menu panel">
+                <button type="button" onClick={() => act(() => api.patch(`/api/accounts/${a.id}`, { isAdmin: !a.isAdmin }), a.isAdmin ? `${a.name} ya no administra` : `${a.name} ahora administra`)}>
+                  {a.isAdmin ? 'Quitar administración' : 'Hacer administradora'}
+                </button>
+                <button type="button" className="danger" onClick={() => act(() => api.patch(`/api/accounts/${a.id}`, { active: !a.active }), a.active ? `Se desactivó la cuenta de ${a.name}` : `Se reactivó la cuenta de ${a.name}`)}>
+                  {a.active ? 'Desactivar cuenta' : 'Reactivar cuenta'}
+                </button>
+              </div>
+            </details>
+          )}
+          {shown?.id === a.id && <CodeBox code={shown.code} name={a.name} kind={shown.kind} onClose={() => setShown(null)} />}
+        </div>
+      ))}
+    </Panel>
+  )
+}
+
 /** Conexión con la bóveda de Obsidian: estado, carpeta, sincronizar ahora y últimos movimientos. */
-function ObsidianPanel() {
+function ObsidianPanel({ admin }: { admin: boolean }) {
   const vault = useVault().data
   const refresh = useRefresh()
   const { toast } = useUI()
@@ -168,8 +332,8 @@ function ObsidianPanel() {
   const syncNow = async () => {
     setBusy(true)
     try {
-      const res = await api.post<{ result: Record<string, number | boolean | string>; status: VaultStatus }>('/api/vault/sync')
-      refresh(qk.vault, qk.tasks, qk.projects)
+      const res = await api.post<{ result: Record<string, number | boolean | string> }>('/api/vault/sync')
+      refresh(qk.vault, qk.tasks, qk.projects, qk.phases)
       const r = res.result
       toast(
         r.ok
@@ -185,74 +349,114 @@ function ObsidianPanel() {
   }
 
   return (
-    <Panel title="Obsidian" icon={<BookOpen size={18} style={{ color: 'var(--acc)' }} />}>
+    <Panel title="Obsidian" icon={<BookOpen size={18} className="acc" />}>
       <div className="setting">
         <div className="txt">
-          <b>Sincronizar tareas y proyectos con el vault</b>
+          <b>{vault.connected ? `Conectado a ${vault.vaultName}` : vault.enabled ? 'No encuentro la bóveda' : 'Sincronización apagada'}</b>
           <span>
             {vault.connected
-              ? `Conectado a ${vault.root}. Cada proyecto de 10_Proyectos es un proyecto aquí y cada nota de 01_Gestion/Tareas, una tarea.`
+              ? 'Proyectos, fases, etapas, tareas y checklist viajan en las dos direcciones. Solo se toca el encabezado de las notas.'
               : vault.enabled
-                ? 'No encuentro la bóveda. Escribe abajo la carpeta del vault (la que contiene 10_Proyectos).'
-                : 'Apagado: los cambios se quedan solo en HQ.'}
+                ? 'Escribe abajo la carpeta del vault (la que contiene 10_Proyectos).'
+                : 'Los cambios se quedan solo en Liiot Hub.'}
           </span>
         </div>
-        <Toggle checked={vault.enabled} onChange={(v) => patch({ enabled: v }, v ? 'Sincronización con Obsidian activada' : 'Sincronización con Obsidian pausada')} label="Sincronizar con Obsidian" />
+        {admin && <Toggle checked={vault.enabled} onChange={(v) => patch({ enabled: v }, v ? 'Sincronización con Obsidian activada' : 'Sincronización con Obsidian pausada')} label="Sincronizar con Obsidian" />}
       </div>
-      <form
-        className="row"
-        style={{ gap: 8, margin: '10px 0' }}
-        onSubmit={(e) => {
-          e.preventDefault()
-          void patch({ path }, 'Carpeta del vault guardada')
-        }}
-      >
-        <input className="input" value={path} onChange={(e) => setPath(e.target.value)} placeholder="G:\Mi unidad\Liiot" aria-label="Carpeta del vault" />
-        <button type="submit" className="btn" disabled={!path.trim() || path === (vault.path || vault.root)}>
-          Guardar
-        </button>
-      </form>
+      {admin && (
+        <form
+          className="row"
+          style={{ gap: 8, margin: '10px 0' }}
+          onSubmit={(e) => {
+            e.preventDefault()
+            void patch({ path }, 'Carpeta del vault guardada')
+          }}
+        >
+          <input className="input" value={path} onChange={(e) => setPath(e.target.value)} placeholder="G:\Mi unidad\Liiot" aria-label="Carpeta del vault" />
+          <button type="submit" className="btn" disabled={!path.trim() || path === (vault.path || vault.root)}>
+            Guardar
+          </button>
+        </form>
+      )}
       <div className="row wrap" style={{ gap: 8 }}>
         <button type="button" className="btn primary sm" onClick={syncNow} disabled={busy || !vault.connected}>
           <RefreshCw size={14} className={busy || vault.busy ? 'spin' : undefined} /> Sincronizar ahora
         </button>
-        <span className="muted" style={{ fontSize: 12.5 }}>
-          {vault.linkedTasks} tareas y {vault.linkedProjects} proyectos vinculados
-          {vault.lastSync ? ` · última revisión ${fmtMoment(vault.lastSync)}` : ''} · revisa sola cada 15 s
+        <span className="muted small">
+          {vault.linkedTasks} tareas vinculadas{vault.lastSync ? ` · última revisión ${fmtMoment(vault.lastSync)}` : ''}
         </span>
       </div>
-      {vault.lastError && <p style={{ color: 'var(--bad)', fontSize: 12.5, marginTop: 8 }}>Último error: {vault.lastError}</p>}
+      {vault.lastError && <p className="bad small" style={{ marginTop: 8 }}>Último error: {vault.lastError}</p>}
       {vault.activity.length > 0 && (
         <ul className="vault-log">
-          {vault.activity.slice(0, 6).map((a, i) => (
+          {vault.activity.slice(0, 5).map((a, i) => (
             <li key={`${a.at}-${i}`}>
               <span className="muted">{fmtMoment(a.at)}</span> {a.text}
             </li>
           ))}
         </ul>
       )}
-      <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-        HQ solo cambia el encabezado (frontmatter) de las notas, nunca su texto, y no borra archivos: si borras una nota, la tarea queda archivada aquí.
-      </p>
     </Panel>
   )
 }
 
-function AvatarEditor({ member }: { member: Member }) {
+function AppearancePanel() {
+  const { mode, setMode, pixel, setPixel, calm, setCalm } = usePrefs()
+  return (
+    <Panel title="Apariencia" icon={<Palette size={18} className="acc" />}>
+      <div className="setting">
+        <div className="txt">
+          <b>Modo</b>
+          <span>Automático: oscuro de 6 p. m. a 6 a. m.</span>
+        </div>
+        <div className="seg">
+          {(
+            [
+              ['dark', 'Oscuro'],
+              ['light', 'Claro'],
+              ['auto', 'Automático'],
+            ] as [Mode, string][]
+          ).map(([v, label]) => (
+            <button key={v} type="button" aria-pressed={mode === v} onClick={() => setMode(v)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="setting">
+        <div className="txt">
+          <b>Menos movimiento</b>
+          <span>Quita las animaciones del fondo y al entrar a los proyectos.</span>
+        </div>
+        <Toggle checked={calm} onChange={setCalm} label="Menos movimiento" />
+      </div>
+      <div className="setting">
+        <div className="txt">
+          <b>Oficina en modo pixel</b>
+          <span>Pixela la escena 3D, como un videojuego retro.</span>
+        </div>
+        <Toggle checked={pixel} onChange={setPixel} label="Modo pixel" />
+      </div>
+    </Panel>
+  )
+}
+
+function ProfileEditor({ member }: { member: Member }) {
   const refresh = useRefresh()
   const { toast } = useUI()
   const [a, setA] = useState<AvatarCfg>(member.avatar)
   const [color, setColor] = useState(member.color)
-  const [capacity, setCapacity] = useState(member.capacity)
+  const [info, setInfo] = useState({ name: member.name, fullName: member.fullName, role: member.role })
   const [hours, setHours] = useState({ start: member.workStart, end: member.workEnd })
+  const [days, setDays] = useState<number[]>(member.workDays ?? [0, 1, 2, 3, 4])
   useEffect(() => setA(member.avatar), [member.avatar])
   const set = (patch: Partial<AvatarCfg>) => setA((prev) => ({ ...prev, ...patch }))
 
   const save = async () => {
     try {
-      await api.patch(`/api/members/${member.id}`, { avatar: a, color, capacity, workStart: hours.start, workEnd: hours.end })
-      refresh(qk.members, qk.metrics, qk.presence)
-      toast(`Avatar de ${member.name} guardado`)
+      await api.patch(`/api/members/${member.id}`, { avatar: a, color, ...info, workStart: hours.start, workEnd: hours.end, workDays: days })
+      refresh(qk.members, qk.presence, qk.auth)
+      toast('Perfil guardado')
     } catch (e) {
       toast((e as Error).message, 'bad')
     }
@@ -270,19 +474,42 @@ function AvatarEditor({ member }: { member: Member }) {
   return (
     <div className="avatar-editor">
       <div className="avatar-preview" style={{ ['--pc' as string]: color }}>
-        <Avatar avatar={a} color={color} variant="full" size={160} title={member.name} />
-        <b style={{ font: '600 16px var(--font-display)' }}>{member.name}</b>
-        <span className="muted" style={{ fontSize: 12 }}>
-          {member.role} · {member.area}
-        </span>
+        <Avatar avatar={a} color={color} variant="full" size={150} title={member.name} />
+        <b>{info.name}</b>
+        <span className="muted small">{info.role}</span>
         <button type="button" className="btn primary" onClick={save}>
-          Guardar avatar
+          Guardar perfil
         </button>
-        <p className="muted" style={{ fontSize: 11.5, textAlign: 'center' }}>
+        <p className="muted small" style={{ textAlign: 'center' }}>
           El mismo diseño se usa en la oficina 3D.
         </p>
       </div>
       <div className="stack" style={{ gap: 14 }}>
+        <div className="fields">
+          <label className="field">
+            <span>Nombre corto</span>
+            <input className="input" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
+          </label>
+          <label className="field">
+            <span>Rol</span>
+            <input className="input" value={info.role} onChange={(e) => setInfo({ ...info, role: e.target.value })} />
+          </label>
+        </div>
+        <div className="field">
+          <span>Horario (fuera de él, la oficina te muestra descansando)</span>
+          <div className="row wrap">
+            <input className="input" type="time" style={{ width: 130 }} value={hours.start} onChange={(e) => setHours({ ...hours, start: e.target.value })} aria-label="Empiezo" />
+            <span className="muted">a</span>
+            <input className="input" type="time" style={{ width: 130 }} value={hours.end} onChange={(e) => setHours({ ...hours, end: e.target.value })} aria-label="Termino" />
+            <div className="days" role="group" aria-label="Días de trabajo">
+              {DAYS.map((d, i) => (
+                <button key={d} type="button" aria-pressed={days.includes(i)} title={DAY_NAMES[i]} onClick={() => setDays(days.includes(i) ? days.filter((x) => x !== i) : [...days, i].sort())}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="field">
           <span>Cabello</span>
           <div className="pills">
@@ -333,19 +560,6 @@ function AvatarEditor({ member }: { member: Member }) {
         <div className="field">
           <span>Color personal</span>
           {swatches(['#FF6A33', '#8B45CC', '#E2B31C', '#E04B66', '#34D399', '#60A5FA', '#3DD6F5'], color, setColor)}
-        </div>
-        <div className="fields">
-          <label className="field">
-            <span>Capacidad semanal (puntos)</span>
-            <input className="input" type="number" min={1} max={40} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} />
-          </label>
-          <div className="field">
-            <span>Horario</span>
-            <div className="row">
-              <input className="input" type="time" value={hours.start} onChange={(e) => setHours({ ...hours, start: e.target.value })} aria-label="Inicio" />
-              <input className="input" type="time" value={hours.end} onChange={(e) => setHours({ ...hours, end: e.target.value })} aria-label="Fin" />
-            </div>
-          </div>
         </div>
       </div>
     </div>

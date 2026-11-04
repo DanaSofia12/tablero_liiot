@@ -1,4 +1,4 @@
-import type { Universe } from '../prefs'
+import type { Theme } from '../types'
 
 export interface ScenePalette {
   night: boolean
@@ -33,6 +33,8 @@ export interface ScenePalette {
   sunColor: string
   hemiSky: string
   hemiGround: string
+  /** Luz del centro de la oficina de noche. */
+  lamp: string
 }
 
 const LIIOT_DARK: ScenePalette = {
@@ -68,6 +70,7 @@ const LIIOT_DARK: ScenePalette = {
   sunColor: '#b9a8ff',
   hemiSky: '#6b4fa8',
   hemiGround: '#1a1028',
+  lamp: '#b58cff',
 }
 
 const LIIOT_LIGHT: ScenePalette = {
@@ -103,79 +106,83 @@ const LIIOT_LIGHT: ScenePalette = {
   sunColor: '#fff3e2',
   hemiSky: '#fff1fb',
   hemiGround: '#e9d8c6',
+  lamp: '#b58cff',
 }
 
+// Bleepy (brandbook) de noche: azul noche con luces cálidas; naranja #F36F2B, celeste #658DB9 y crema #E2E5B2 resaltan
 const BLEEPY_DARK: ScenePalette = {
   night: true,
-  floor: '#1f1a57',
-  grid: '#2f2a78',
-  wallA: '#1b1752',
-  wallB: '#161349',
-  trim: '#2e2879',
-  desk: '#2d2874',
-  wood: '#433b9a',
-  metal: '#6870aa',
-  chair: '#2bb7d6',
-  sofa: '#e04aa0',
-  cushion: '#f5bf33',
-  pot: '#e6962e',
-  leaf: '#43c47a',
-  leaf2: '#2da05e',
-  screen: '#080624',
-  acc: '#7c5cff',
-  acc2: '#ff4fa3',
-  acc3: '#3dd6f5',
-  rug: '#3b1e63',
-  sky1: '#06041a',
-  sky2: '#25165e',
-  neonA: '#3dd6f5',
-  neonB: '#ff4fa3',
-  chrome: '#c7f6ff',
-  paper: '#e9e7ff',
-  notes: ['#ff9fd0', '#ffe27a', '#a9c7ff', '#b6f27e', '#9ef0d9'],
-  ambient: 0.55,
-  sun: 0.5,
-  sunColor: '#9fd8ff',
-  hemiSky: '#4f45c9',
-  hemiGround: '#0b0930',
+  floor: '#1c2b59',
+  grid: '#27396e',
+  wallA: '#182653',
+  wallB: '#142149',
+  trim: '#2b3e79',
+  desk: '#26386f',
+  wood: '#35498b',
+  metal: '#8a9cc8',
+  chair: '#f36f2b',
+  sofa: '#f36f2b',
+  cushion: '#e2e5b2',
+  pot: '#d9561a',
+  leaf: '#6fbf8c',
+  leaf2: '#4f9d6c',
+  screen: '#0b1330',
+  acc: '#8fb0e8',
+  acc2: '#f36f2b',
+  acc3: '#e2e5b2',
+  rug: '#3061ad',
+  sky1: '#0b1330',
+  sky2: '#1f3170',
+  neonA: '#8fb0e8',
+  neonB: '#f36f2b',
+  chrome: '#e2e5b2',
+  paper: '#f6f3e4',
+  notes: ['#ffb489', '#e2e5b2', '#a9c2e2', '#f3c58f', '#cfe3b6'],
+  ambient: 0.62,
+  sun: 0.7,
+  sunColor: '#b8cdf2',
+  hemiSky: '#4a62a8',
+  hemiGround: '#0f1a3d',
+  lamp: '#a9c2f0',
 }
 
 const BLEEPY_LIGHT: ScenePalette = {
   night: false,
-  floor: '#ece6ff',
-  grid: '#d8cdfb',
-  wallA: '#dcefff',
-  wallB: '#cde4ff',
+  floor: '#f1efdc',
+  grid: '#e2dfc4',
+  wallA: '#f6f5e6',
+  wallB: '#eceadb',
   trim: '#ffffff',
   desk: '#ffffff',
-  wood: '#c9bcff',
-  metal: '#d6dceb',
-  chair: '#7fe0f2',
-  sofa: '#ff7dbe',
-  cushion: '#ffd45c',
-  pot: '#ffb13d',
-  leaf: '#5fd38a',
-  leaf2: '#36b56c',
-  screen: '#1e1660',
-  acc: '#5b2ee8',
-  acc2: '#ff4fa3',
-  acc3: '#3dd6f5',
-  rug: '#ffe3f2',
-  sky1: '#a8b4ff',
-  sky2: '#ffc6e7',
-  neonA: '#7c5cff',
-  neonB: '#ff4fa3',
-  chrome: '#d2f8ff',
+  wood: '#d9cfae',
+  metal: '#c9cfdf',
+  chair: '#658db9',
+  sofa: '#f36f2b',
+  cushion: '#e2e5b2',
+  pot: '#d9561a',
+  leaf: '#7fb98a',
+  leaf2: '#5a9a6c',
+  screen: '#1b2350',
+  acc: '#3061ad',
+  acc2: '#f36f2b',
+  acc3: '#658db9',
+  rug: '#e9e7cf',
+  sky1: '#9db8dc',
+  sky2: '#f4d8bf',
+  neonA: '#3061ad',
+  neonB: '#f36f2b',
+  chrome: '#e2e5b2',
   paper: '#ffffff',
-  notes: ['#ff9fd0', '#ffe27a', '#a9c7ff', '#b6f27e', '#9ef0d9'],
+  notes: ['#f7a77a', '#e2e5b2', '#a9c2e2', '#f3c58f', '#cfe3b6'],
   ambient: 1.05,
   sun: 1.8,
-  sunColor: '#fff6ff',
-  hemiSky: '#f1f0ff',
-  hemiGround: '#dcd2ff',
+  sunColor: '#fffbea',
+  hemiSky: '#f6f5e6',
+  hemiGround: '#dcd8bd',
+  lamp: '#ffd2a8',
 }
 
-export function paletteFor(uni: Universe, mode: 'dark' | 'light'): ScenePalette {
-  if (uni === 'bleepy') return mode === 'dark' ? BLEEPY_DARK : BLEEPY_LIGHT
+export function paletteFor(theme: Theme, mode: 'dark' | 'light'): ScenePalette {
+  if (theme === 'bleepy') return mode === 'dark' ? BLEEPY_DARK : BLEEPY_LIGHT
   return mode === 'dark' ? LIIOT_DARK : LIIOT_LIGHT
 }
